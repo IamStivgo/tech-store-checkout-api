@@ -30,6 +30,7 @@ export default tseslint.config(
     rules: {
       '@typescript-eslint/no-extraneous-class': ['error', { allowWithDecorator: true }],
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       'import/no-default-export': 'error',
       'import/no-cycle': 'error',
       'import/order': [
