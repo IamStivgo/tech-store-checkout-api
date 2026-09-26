@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.zip
+*.tsbuildinfo
+
+# Tests
+coverage/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+.forbidden-words
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS and editors
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
