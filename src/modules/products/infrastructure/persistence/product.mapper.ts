@@ -28,6 +28,7 @@ const productItemSchema = z.object({
   weightGrams: z.number(),
   images: z.tuple([imageSchema], imageSchema),
   active: z.boolean(),
+  displayOrder: z.number(),
   updatedAt: z.iso.datetime(),
 });
 
@@ -63,6 +64,7 @@ export const toProduct = (item: Record<string, unknown>): Result<Product, Persis
         weightGrams: row.weightGrams,
         images: row.images,
         active: row.active,
+        displayOrder: row.displayOrder,
         updatedAt: new Date(row.updatedAt),
       }),
     )

@@ -28,6 +28,20 @@ describe('ListProducts', () => {
     ]);
   });
 
+  it('sorts the catalog by display order, then by SKU, whatever the storage order', async () => {
+    const products = [
+      aProduct({ id: 'third', sku: 'TEC-C', displayOrder: 2 }),
+      aProduct({ id: 'second', sku: 'TEC-B', displayOrder: 1 }),
+      aProduct({ id: 'first', sku: 'TEC-A', displayOrder: 1 }),
+      aProduct({ id: 'zero', sku: 'TEC-Z', displayOrder: 0 }),
+    ];
+    const listProducts = new ListProducts(new InMemoryProductRepository(products), policy);
+
+    const ids = unwrap(await listProducts.execute()).map((product) => product.id);
+
+    expect(ids).toEqual(['zero', 'first', 'second', 'third']);
+  });
+
   it('returns an empty list when there are no active products', async () => {
     const listProducts = new ListProducts(new InMemoryProductRepository(), policy);
 

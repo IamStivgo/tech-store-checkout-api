@@ -31,6 +31,7 @@ export const productProps = (overrides: Partial<ProductProps> = {}): ProductProp
   weightGrams: 60,
   images: [anImage()],
   active: true,
+  displayOrder: 1,
   updatedAt: new Date('2026-09-24T20:15:00.000Z'),
   ...overrides,
 });

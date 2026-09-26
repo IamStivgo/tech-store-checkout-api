@@ -13,6 +13,7 @@ describe('toProduct', () => {
       sku: 'TEC-CBL-USBC',
       weightGrams: 60,
       active: true,
+      displayOrder: 1,
       updatedAt: new Date('2026-09-24T20:15:00.000Z'),
     });
     expect(product.price.toJSON()).toEqual({ amountInCents: 3_990_000, currency: 'COP' });
@@ -30,6 +31,8 @@ describe('toProduct', () => {
     ['an unsupported currency', { currency: 'USD' }],
     ['a negative stock counter', { stockReserved: -1 }],
     ['a non-positive weight', { weightGrams: 0 }],
+    ['no display order', { displayOrder: undefined }],
+    ['a negative display order', { displayOrder: -1 }],
   ])('reports corrupt items with %s as persistence errors', (_case, overrides) => {
     const result = toProduct(aProductItem(overrides));
 

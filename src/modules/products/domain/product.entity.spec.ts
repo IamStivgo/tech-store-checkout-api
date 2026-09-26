@@ -30,6 +30,12 @@ describe('Product', () => {
   it.each([0, -10, 12.5])('rejects a weight of %p grams', (weightGrams) => {
     const result = Product.create(productProps({ weightGrams }));
 
-    expect(result.isErr).toBe(true);
+    expect(result.isErr && result.error.fieldErrors[0]?.field).toBe('weightGrams');
+  });
+
+  it.each([-1, 1.5])('rejects a display order of %p', (displayOrder) => {
+    const result = Product.create(productProps({ displayOrder }));
+
+    expect(result.isErr && result.error.fieldErrors[0]?.field).toBe('displayOrder');
   });
 });

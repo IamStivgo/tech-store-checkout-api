@@ -28,6 +28,8 @@ export interface ProductProps {
   readonly weightGrams: number;
   readonly images: readonly [ProductImage, ...ProductImage[]];
   readonly active: boolean;
+  /** Position in the catalog, as in the approved mockups (lower first). */
+  readonly displayOrder: number;
   readonly updatedAt: Date;
 }
 
@@ -42,6 +44,7 @@ export class Product {
   readonly weightGrams: number;
   readonly images: readonly [ProductImage, ...ProductImage[]];
   readonly active: boolean;
+  readonly displayOrder: number;
   readonly updatedAt: Date;
 
   private constructor(props: ProductProps) {
@@ -55,12 +58,18 @@ export class Product {
     this.weightGrams = props.weightGrams;
     this.images = props.images;
     this.active = props.active;
+    this.displayOrder = props.displayOrder;
     this.updatedAt = props.updatedAt;
   }
 
   static create(props: ProductProps): Result<Product, ValidationError> {
     if (!Number.isSafeInteger(props.weightGrams) || props.weightGrams <= 0) {
       return err(ValidationError.forField('weightGrams', 'weightGrams must be a positive integer'));
+    }
+    if (!Number.isSafeInteger(props.displayOrder) || props.displayOrder < 0) {
+      return err(
+        ValidationError.forField('displayOrder', 'displayOrder must be a non-negative integer'),
+      );
     }
     return ok(new Product(props));
   }

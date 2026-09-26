@@ -21,6 +21,7 @@ export const aProductItem = (overrides: Record<string, unknown> = {}): Record<st
     },
   ],
   active: true,
+  displayOrder: 1,
   version: 1,
   createdAt: '2026-09-24T20:00:00.000Z',
   updatedAt: '2026-09-24T20:15:00.000Z',
