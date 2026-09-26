@@ -6,7 +6,7 @@ import { APP_CONFIG } from './config/app-config.token';
 import { configureApp } from './shared/infrastructure/http/configure-app';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { bufferLogs: true });
   const config = app.get<AppConfig>(APP_CONFIG);
 
   configureApp(app, config);

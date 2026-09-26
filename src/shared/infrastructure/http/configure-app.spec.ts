@@ -1,16 +1,30 @@
 import { VersioningType, type INestApplication } from '@nestjs/common';
+import { Logger } from 'nestjs-pino';
 
 import { loadAppConfig } from '../../../config/app-config';
 
 import { configureApp } from './configure-app';
 
+const pinoLogger = { log: jest.fn() };
+
 const createAppMock = () => ({
+  get: jest.fn().mockReturnValue(pinoLogger),
+  useLogger: jest.fn(),
   setGlobalPrefix: jest.fn(),
   enableVersioning: jest.fn(),
   enableCors: jest.fn(),
 });
 
 describe('configureApp', () => {
+  it('uses the pino logger for the application logs', () => {
+    const app = createAppMock();
+
+    configureApp(app as unknown as INestApplication, loadAppConfig({ APP_ENV: 'test' }));
+
+    expect(app.get).toHaveBeenCalledWith(Logger);
+    expect(app.useLogger).toHaveBeenCalledWith(pinoLogger);
+  });
+
   it('exposes routes under /api with URI versioning defaulting to v1', () => {
     const app = createAppMock();
 

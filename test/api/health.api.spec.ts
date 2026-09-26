@@ -11,7 +11,11 @@ import { CLOCK } from '../../src/shared/infrastructure/system/clock.token';
 import { FakeClock } from '../fakes/fake-clock';
 
 describe('GET /api/v1/health', () => {
-  const config = loadAppConfig({ APP_ENV: 'test', APP_VERSION: '1.2.3+abc123' });
+  const config = loadAppConfig({
+    APP_ENV: 'test',
+    APP_VERSION: '1.2.3+abc123',
+    LOG_LEVEL: 'silent',
+  });
   const clock = new FakeClock(new Date('2026-09-24T20:15:00.000Z'));
   let app: INestApplication<App>;
 
@@ -47,6 +51,20 @@ describe('GET /api/v1/health', () => {
     const response = await request(app.getHttpServer()).get('/api/v1/health');
 
     expect(response.headers['cache-control']).toBe('no-store');
+  });
+
+  it('returns a generated X-Request-Id when the client sends none', async () => {
+    const response = await request(app.getHttpServer()).get('/api/v1/health');
+
+    expect(response.headers['x-request-id']).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  it('echoes a safe X-Request-Id sent by the client', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/health')
+      .set('X-Request-Id', 'smoke-test-42');
+
+    expect(response.headers['x-request-id']).toBe('smoke-test-42');
   });
 
   it('is only exposed under the versioned api prefix', async () => {
