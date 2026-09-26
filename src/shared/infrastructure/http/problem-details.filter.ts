@@ -27,6 +27,12 @@ export class ProblemDetailsFilter implements ExceptionFilter {
       this.logger.error(exception);
     }
 
-    response.status(problem.status).type(PROBLEM_JSON_CONTENT_TYPE).json(problem);
+    // Route-level @Header values are set before the handler runs, so errors could inherit a
+    // cacheable Cache-Control (e.g. a 404 cached for a day). Errors are never cacheable.
+    response
+      .status(problem.status)
+      .setHeader('Cache-Control', 'no-store')
+      .type(PROBLEM_JSON_CONTENT_TYPE)
+      .json(problem);
   }
 }

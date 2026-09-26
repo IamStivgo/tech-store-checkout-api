@@ -1,4 +1,4 @@
 dist/
-coverage/
+/coverage/
 package-lock.json
 docs/openapi.json
