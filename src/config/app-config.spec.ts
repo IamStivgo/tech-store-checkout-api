@@ -1,9 +1,11 @@
 import { loadAppConfig } from './app-config';
 import { InvalidConfigError } from './invalid-config.error';
 
+const REQUIRED = { APP_ENV: 'local', TABLE_PRODUCTS: 'checkout-app-local-products' };
+
 describe('loadAppConfig', () => {
-  it('applies defaults when only APP_ENV is set', () => {
-    const config = loadAppConfig({ APP_ENV: 'local' });
+  it('applies defaults when only the required variables are set', () => {
+    const config = loadAppConfig(REQUIRED);
 
     expect(config).toEqual({
       appEnv: 'local',
@@ -11,6 +13,10 @@ describe('loadAppConfig', () => {
       logLevel: 'info',
       port: 3000,
       corsAllowedOrigins: [],
+      awsRegion: 'us-east-1',
+      dynamodbEndpoint: undefined,
+      tables: { products: 'checkout-app-local-products' },
+      catalog: { lowStockThreshold: 3, maxUnitsPerOrder: 5 },
     });
   });
 
@@ -21,6 +27,11 @@ describe('loadAppConfig', () => {
       LOG_LEVEL: 'warn',
       PORT: '8080',
       CORS_ALLOWED_ORIGINS: ' http://localhost:5173 , ,http://localhost:8080',
+      AWS_REGION: 'us-east-2',
+      DYNAMODB_ENDPOINT: 'http://localhost:8000',
+      TABLE_PRODUCTS: 'checkout-app-prod-products',
+      LOW_STOCK_THRESHOLD: '2',
+      MAX_UNITS_PER_ORDER: '10',
     });
 
     expect(config).toEqual({
@@ -29,32 +40,41 @@ describe('loadAppConfig', () => {
       logLevel: 'warn',
       port: 8080,
       corsAllowedOrigins: ['http://localhost:5173', 'http://localhost:8080'],
+      awsRegion: 'us-east-2',
+      dynamodbEndpoint: 'http://localhost:8000',
+      tables: { products: 'checkout-app-prod-products' },
+      catalog: { lowStockThreshold: 2, maxUnitsPerOrder: 10 },
     });
   });
 
-  it('fails fast when APP_ENV is missing', () => {
-    expect(() => loadAppConfig({})).toThrow(InvalidConfigError);
-    expect(() => loadAppConfig({})).toThrow(/APP_ENV/);
+  it.each(['APP_ENV', 'TABLE_PRODUCTS'])('fails fast when %s is missing', (variable) => {
+    const env = Object.fromEntries(Object.entries(REQUIRED).filter(([key]) => key !== variable));
+
+    expect(() => loadAppConfig(env)).toThrow(InvalidConfigError);
+    expect(() => loadAppConfig(env)).toThrow(new RegExp(variable));
   });
 
   it.each([
     ['APP_ENV', { APP_ENV: 'staging' }],
-    ['LOG_LEVEL', { APP_ENV: 'local', LOG_LEVEL: 'verbose' }],
-    ['PORT', { APP_ENV: 'local', PORT: 'not-a-number' }],
-    ['PORT', { APP_ENV: 'local', PORT: '70000' }],
-    ['APP_VERSION', { APP_ENV: 'local', APP_VERSION: '   ' }],
-  ])('rejects an invalid %s', (variable, env) => {
-    expect(() => loadAppConfig(env)).toThrow(new RegExp(variable));
+    ['LOG_LEVEL', { LOG_LEVEL: 'verbose' }],
+    ['PORT', { PORT: 'not-a-number' }],
+    ['PORT', { PORT: '70000' }],
+    ['APP_VERSION', { APP_VERSION: '   ' }],
+    ['DYNAMODB_ENDPOINT', { DYNAMODB_ENDPOINT: 'localhost-8000' }],
+    ['LOW_STOCK_THRESHOLD', { LOW_STOCK_THRESHOLD: '-1' }],
+    ['MAX_UNITS_PER_ORDER', { MAX_UNITS_PER_ORDER: '0' }],
+  ])('rejects an invalid %s', (variable, overrides) => {
+    expect(() => loadAppConfig({ ...REQUIRED, ...overrides })).toThrow(new RegExp(variable));
   });
 
   it('reports every invalid variable at once', () => {
     const error = captureConfigError({ LOG_LEVEL: 'verbose', PORT: '0' });
 
-    expect(error.issues).toHaveLength(3);
+    expect(error.issues).toHaveLength(4);
   });
 
   it('does not echo invalid values in the error message', () => {
-    const error = captureConfigError({ APP_ENV: 'super-secret-value' });
+    const error = captureConfigError({ ...REQUIRED, APP_ENV: 'super-secret-value' });
 
     expect(error.message).not.toContain('super-secret-value');
   });

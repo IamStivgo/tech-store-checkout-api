@@ -6,6 +6,9 @@ const APP_ENVS = ['local', 'test', 'prod'] as const;
 const LOG_LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'] as const;
 const DEFAULT_PORT = 3000;
 const MAX_PORT = 65_535;
+const DEFAULT_AWS_REGION = 'us-east-1';
+const DEFAULT_LOW_STOCK_THRESHOLD = 3;
+const DEFAULT_MAX_UNITS_PER_ORDER = 5;
 
 const appConfigSchema = z.object({
   APP_ENV: z.enum(APP_ENVS),
@@ -21,6 +24,11 @@ const appConfigSchema = z.object({
         .map((origin) => origin.trim())
         .filter((origin) => origin.length > 0),
     ),
+  AWS_REGION: z.string().trim().min(1).default(DEFAULT_AWS_REGION),
+  DYNAMODB_ENDPOINT: z.url().optional(),
+  TABLE_PRODUCTS: z.string().trim().min(1),
+  LOW_STOCK_THRESHOLD: z.coerce.number().int().min(0).default(DEFAULT_LOW_STOCK_THRESHOLD),
+  MAX_UNITS_PER_ORDER: z.coerce.number().int().min(1).default(DEFAULT_MAX_UNITS_PER_ORDER),
 });
 
 export type AppEnv = (typeof APP_ENVS)[number];
@@ -32,6 +40,16 @@ export interface AppConfig {
   readonly logLevel: LogLevel;
   readonly port: number;
   readonly corsAllowedOrigins: readonly string[];
+  readonly awsRegion: string;
+  /** Only set locally, to point the SDK at DynamoDB Local. */
+  readonly dynamodbEndpoint: string | undefined;
+  readonly tables: {
+    readonly products: string;
+  };
+  readonly catalog: {
+    readonly lowStockThreshold: number;
+    readonly maxUnitsPerOrder: number;
+  };
 }
 
 export const loadAppConfig = (env: Readonly<Record<string, string | undefined>>): AppConfig => {
@@ -43,13 +61,20 @@ export const loadAppConfig = (env: Readonly<Record<string, string | undefined>>)
     );
   }
 
-  const { APP_ENV, APP_VERSION, LOG_LEVEL, PORT, CORS_ALLOWED_ORIGINS } = result.data;
+  const config = result.data;
 
   return {
-    appEnv: APP_ENV,
-    appVersion: APP_VERSION,
-    logLevel: LOG_LEVEL,
-    port: PORT,
-    corsAllowedOrigins: CORS_ALLOWED_ORIGINS,
+    appEnv: config.APP_ENV,
+    appVersion: config.APP_VERSION,
+    logLevel: config.LOG_LEVEL,
+    port: config.PORT,
+    corsAllowedOrigins: config.CORS_ALLOWED_ORIGINS,
+    awsRegion: config.AWS_REGION,
+    dynamodbEndpoint: config.DYNAMODB_ENDPOINT,
+    tables: { products: config.TABLE_PRODUCTS },
+    catalog: {
+      lowStockThreshold: config.LOW_STOCK_THRESHOLD,
+      maxUnitsPerOrder: config.MAX_UNITS_PER_ORDER,
+    },
   };
 };

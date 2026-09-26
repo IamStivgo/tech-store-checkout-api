@@ -1,5 +1,7 @@
 import type { APIGatewayProxyEventV2, Context } from 'aws-lambda';
 
+import { TEST_ENV } from '../test/builders/app-config.builder';
+
 import { createApiHandler } from './lambda';
 
 const gatewayEvent = (
@@ -38,7 +40,7 @@ describe('API Gateway Lambda handler', () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
-    process.env = { ...originalEnv, APP_ENV: 'test', APP_VERSION: '9.9.9', LOG_LEVEL: 'silent' };
+    process.env = { ...originalEnv, ...TEST_ENV, APP_VERSION: '9.9.9' };
   });
 
   afterAll(() => {
