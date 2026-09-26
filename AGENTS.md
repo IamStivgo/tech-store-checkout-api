@@ -1,0 +1,52 @@
+# AGENTS.md
+
+Guidance for AI coding assistants working in this repository.
+
+## Project
+
+Checkout API for a tech accessories store: product catalog, delivery pricing, customers, transactions and credit card payments through a third-party payment provider (sandbox only). Built with NestJS 11, TypeScript (strict), DynamoDB and AWS Lambda.
+
+## Architecture rules
+
+- Hexagonal architecture per business module: `src/modules/<module>/{domain,application,infrastructure}`.
+- Dependency direction: `infrastructure → application → domain`. Never the other way.
+- `domain/` and `application/` must not import `@nestjs/*`, the AWS SDK, `zod` or any HTTP library. Use cases are plain classes that receive ports through the constructor; wiring happens in infrastructure with `useFactory`.
+- Railway Oriented Programming: business errors are returned as typed `Result`/`ResultAsync` values (`src/shared/domain`). Do not `throw` for business rules; exceptions are only for unexpected failures.
+- Controllers only map DTO → command, call the use case and map the `Result` to HTTP (Problem Details, RFC 9457).
+- All money amounts are integers in cents and are always computed on the server.
+
+## Code conventions
+
+- Identifiers, code, comments and commit messages in English. The README is in Spanish.
+- File names in `kebab-case` with a role suffix: `.entity.ts`, `.vo.ts`, `.port.ts`, `.use-case.ts`, `.controller.ts`, `.dto.ts`, `.adapter.ts`, `.mapper.ts`, `.spec.ts`.
+- No `export default`, no `any`, `readonly` by default, small functions, no magic numbers.
+- Comments only for non-obvious constraints.
+
+## Testing
+
+- Jest. Tests are written alongside the implementation, following the AAA pattern, with names that describe behavior.
+- Unit tests use no real network or AWS: in-memory repositories, `aws-sdk-client-mock`, mocked `fetch`, fake clock and id generator.
+- Coverage gates: statements, lines and functions ≥ 85 %, branches ≥ 81 %.
+
+## Security and compliance (mandatory)
+
+- Never write the name of the company that proposed this exercise anywhere in the repository: code, comments, configuration, commit messages, branch names or docs. Refer to it as "payment provider".
+- Never commit secrets, keys or real provider URLs; use placeholders and `.env` (git-ignored).
+- The card number (PAN) and CVC never reach this API; cards are tokenized in the browser.
+- Never log personal data, tokens or secrets.
+
+## Commands
+
+```bash
+nvm use                         # Node.js 24
+npm ci
+docker compose up -d dynamodb   # DynamoDB Local on 127.0.0.1:8000
+npm run lint
+npm run format:check
+```
+
+## Git workflow
+
+- Branches: `main` (stable), `develop` (integration), `feature/HU-xxx-description`.
+- Conventional Commits, enforced by commitlint; lint-staged runs ESLint and Prettier on staged files.
+- The developer creates branches and commits; assistants propose changes and commit messages.
