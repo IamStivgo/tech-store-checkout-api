@@ -7,7 +7,7 @@ dist/
 *.tsbuildinfo
 
 # Tests
-coverage/
+/coverage/
 
 # Environment and secrets
 .env

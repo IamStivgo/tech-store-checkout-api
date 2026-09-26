@@ -19,6 +19,7 @@
     "typecheck": "tsc --noEmit",
     "db:create-tables": "node --env-file-if-exists=.env -r ts-node/register/transpile-only scripts/create-local-tables.ts",
     "seed": "node --env-file-if-exists=.env -r ts-node/register/transpile-only scripts/seed.ts",
+    "coverage:build": "node -r ts-node/register/transpile-only scripts/build-coverage-data.ts && prettier --write src/modules/coverage/infrastructure/coverage-data.json",
     "test": "jest --coverage",
     "prepare": "husky"
   },

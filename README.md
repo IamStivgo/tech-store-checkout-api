@@ -70,3 +70,7 @@ npm run start:dev               # http://localhost:3000/api/v1/products
 - Ramas: `main` (estable), `develop` (integración) y `feature/HU-xxx-descripcion`.
 - Commits en inglés con [Conventional Commits](https://www.conventionalcommits.org/), validados por commitlint.
 - Antes de cada commit, lint-staged ejecuta ESLint y Prettier sobre los archivos modificados.
+
+## Datos de terceros
+
+Los departamentos y municipios de `src/modules/coverage/infrastructure/coverage-data.json` provienen de [DIVIPOLA - Códigos municipios](https://www.datos.gov.co/d/gdxc-w37w), publicado por el Departamento Administrativo Nacional de Estadística (DANE) bajo la licencia [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). Los nombres se convirtieron de mayúsculas a formato de título; los datos derivados conservan la misma licencia. `npm run coverage:build` los actualiza sin modificar las zonas ni las tarifas de envío.
