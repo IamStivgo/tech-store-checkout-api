@@ -5,6 +5,7 @@ import { ProblemDetailsFilter } from './problem-details.filter';
 const createHost = (request: { path: string; id?: unknown }) => {
   const response = {
     status: jest.fn().mockReturnThis(),
+    setHeader: jest.fn().mockReturnThis(),
     type: jest.fn().mockReturnThis(),
     json: jest.fn().mockReturnThis(),
   };
@@ -39,6 +40,14 @@ describe('ProblemDetailsFilter', () => {
     expect(response.json).toHaveBeenCalledWith(
       expect.objectContaining({ instance: '/api/v1/products/42', traceId: 'req-1' }),
     );
+  });
+
+  it('never lets error responses be cached', () => {
+    const { host, response } = createHost({ path: '/api/v1/products/42', id: 'req-1' });
+
+    new ProblemDetailsFilter().catch(new NotFoundException(), host);
+
+    expect(response.setHeader).toHaveBeenCalledWith('Cache-Control', 'no-store');
   });
 
   it('uses an unknown trace id when the request has no id', () => {
