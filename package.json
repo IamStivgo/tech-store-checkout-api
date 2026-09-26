@@ -9,12 +9,14 @@
   },
   "scripts": {
     "build": "nest build",
-    "start": "node dist/main.js",
-    "start:dev": "nest start --watch",
+    "start": "node --env-file-if-exists=.env dist/main.js",
+    "start:dev": "nest start --watch --exec \"node --env-file-if-exists=.env\" | pino-pretty",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "test": "jest --coverage",
     "prepare": "husky"
   },
   "dependencies": {

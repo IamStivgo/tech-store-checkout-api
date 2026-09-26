@@ -13,9 +13,9 @@
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
     "sourceMap": true,
+    "rootDir": "./",
     "outDir": "./dist",
     "baseUrl": "./",
-    "incremental": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
@@ -28,5 +28,5 @@
     "useUnknownInCatchVariables": true,
     "types": ["node", "jest"]
   },
-  "include": ["src", "test", "scripts"]
+  "include": ["src", "test", "scripts", "jest.config.ts"]
 }
