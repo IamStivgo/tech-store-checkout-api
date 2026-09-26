@@ -7,7 +7,7 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['dist/', 'coverage/', 'node_modules/', 'docs/openapi.json'],
+    ignores: ['dist/', 'coverage/'],
   },
   eslint.configs.recommended,
   tseslint.configs.strictTypeChecked,
@@ -25,7 +25,6 @@ export default tseslint.config(
     settings: {
       'import/resolver': {
         typescript: { project: './tsconfig.json' },
-        node: true,
       },
     },
     rules: {
