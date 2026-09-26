@@ -2,6 +2,11 @@ import { STATUS_CODES } from 'node:http';
 
 import { HttpException, HttpStatus } from '@nestjs/common';
 
+import type { ErrorContext } from '../../domain/domain-error';
+import { ValidationError, type FieldError } from '../../domain/validation-error';
+
+import { DomainHttpException } from './domain-http.exception';
+
 export const PROBLEM_JSON_CONTENT_TYPE = 'application/problem+json';
 
 const PROBLEM_TYPE_BASE_PATH = '/problems';
@@ -23,6 +28,8 @@ export interface ProblemDetails {
   readonly instance: string;
   readonly code: string;
   readonly traceId: string;
+  readonly context?: ErrorContext;
+  readonly errors?: readonly FieldError[];
 }
 
 export interface ProblemContext {
@@ -52,7 +59,37 @@ const internalError = (context: ProblemContext): ProblemDetails => ({
   traceId: context.traceId,
 });
 
+const fromDomainError = (
+  exception: DomainHttpException,
+  context: ProblemContext,
+): ProblemDetails => {
+  const { error } = exception;
+
+  if (error.code === INTERNAL_ERROR_CODE) {
+    return internalError(context);
+  }
+
+  const status = exception.getStatus();
+  const hasContext = Object.keys(error.context).length > 0;
+
+  return {
+    type: typeFor(error.code),
+    title: titleFor(status),
+    status,
+    detail: error.detail,
+    instance: context.instance,
+    code: error.code,
+    traceId: context.traceId,
+    ...(hasContext ? { context: error.context } : {}),
+    ...(error instanceof ValidationError ? { errors: error.fieldErrors } : {}),
+  };
+};
+
 export const toProblemDetails = (exception: unknown, context: ProblemContext): ProblemDetails => {
+  if (exception instanceof DomainHttpException) {
+    return fromDomainError(exception, context);
+  }
+
   if (!(exception instanceof HttpException) || isServerError(exception.getStatus())) {
     return internalError(context);
   }

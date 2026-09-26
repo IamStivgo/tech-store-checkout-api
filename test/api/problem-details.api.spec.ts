@@ -2,6 +2,10 @@ import { Controller, Get, type INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { App } from 'supertest/types';
 
+import { errAsync } from '../../src/shared/domain/result';
+import { toHttpResponse } from '../../src/shared/infrastructure/http/to-http-response';
+import { FakeInsufficientStockError } from '../fakes/fake-domain-errors';
+
 import { createTestApp } from './create-test-app';
 
 @Controller('test-failures')
@@ -9,6 +13,11 @@ class FailingController {
   @Get('unexpected')
   failUnexpectedly(): never {
     throw new Error('connection string with db-password=hunter2');
+  }
+
+  @Get('domain')
+  failWithDomainError(): Promise<never> {
+    return toHttpResponse(errAsync(new FakeInsufficientStockError(2)));
   }
 }
 
@@ -38,6 +47,25 @@ describe('Problem Details error responses', () => {
       instance: '/api/v1/does-not-exist',
       code: 'NOT_FOUND',
       traceId: 'trace-404',
+    });
+  });
+
+  it('renders domain errors returned by use cases as problems with their context', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/test-failures/domain')
+      .set('X-Request-Id', 'trace-409');
+
+    expect(response.status).toBe(409);
+    expect(response.headers['content-type']).toMatch(/^application\/problem\+json/);
+    expect(response.body).toEqual({
+      type: '/problems/insufficient-stock',
+      title: 'Conflict',
+      status: 409,
+      detail: 'Only 2 units are available for this product.',
+      instance: '/api/v1/test-failures/domain',
+      code: 'INSUFFICIENT_STOCK',
+      traceId: 'trace-409',
+      context: { availableUnits: 2 },
     });
   });
 
