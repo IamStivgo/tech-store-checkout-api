@@ -18,6 +18,7 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "db:create-tables": "node --env-file-if-exists=.env -r ts-node/register/transpile-only scripts/create-local-tables.ts",
+    "seed": "node --env-file-if-exists=.env -r ts-node/register/transpile-only scripts/seed.ts",
     "test": "jest --coverage",
     "prepare": "husky"
   },
