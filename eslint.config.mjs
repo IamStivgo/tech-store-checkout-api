@@ -64,6 +64,12 @@ export default tseslint.config(
     },
   },
   {
+    files: ['jest.config.ts'],
+    rules: {
+      'import/no-default-export': 'off',
+    },
+  },
+  {
     files: ['**/*.{js,mjs,cjs}'],
     extends: [tseslint.configs.disableTypeChecked],
     rules: {
