@@ -1,0 +1,15 @@
+name: tech-store-checkout-api
+
+services:
+  dynamodb:
+    image: amazon/dynamodb-local:3.3.1
+    command: ['-jar', 'DynamoDBLocal.jar', '-sharedDb', '-dbPath', './data']
+    # The image has no data directory, so a named volume is mounted as root.
+    user: root
+    ports:
+      - '127.0.0.1:8000:8000'
+    volumes:
+      - dynamodb-data:/home/dynamodblocal/data
+
+volumes:
+  dynamodb-data:
