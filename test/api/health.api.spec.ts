@@ -1,35 +1,19 @@
 import type { INestApplication } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import type { App } from 'supertest/types';
 
-import { AppModule } from '../../src/app.module';
-import { loadAppConfig } from '../../src/config/app-config';
-import { APP_CONFIG } from '../../src/config/app-config.token';
-import { configureApp } from '../../src/shared/infrastructure/http/configure-app';
-import { CLOCK } from '../../src/shared/infrastructure/system/clock.token';
 import { FakeClock } from '../fakes/fake-clock';
 
+import { createTestApp } from './create-test-app';
+
 describe('GET /api/v1/health', () => {
-  const config = loadAppConfig({
-    APP_ENV: 'test',
-    APP_VERSION: '1.2.3+abc123',
-    LOG_LEVEL: 'silent',
-  });
-  const clock = new FakeClock(new Date('2026-09-24T20:15:00.000Z'));
   let app: INestApplication<App>;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(APP_CONFIG)
-      .useValue(config)
-      .overrideProvider(CLOCK)
-      .useValue(clock)
-      .compile();
-
-    app = moduleRef.createNestApplication();
-    configureApp(app, config);
-    await app.init();
+    app = await createTestApp({
+      env: { APP_VERSION: '1.2.3+abc123' },
+      clock: new FakeClock(new Date('2026-09-24T20:15:00.000Z')),
+    });
   });
 
   afterAll(async () => {

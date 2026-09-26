@@ -4,12 +4,14 @@ import { Logger } from 'nestjs-pino';
 import { loadAppConfig } from '../../../config/app-config';
 
 import { configureApp } from './configure-app';
+import { ProblemDetailsFilter } from './problem-details.filter';
 
 const pinoLogger = { log: jest.fn() };
 
 const createAppMock = () => ({
   get: jest.fn().mockReturnValue(pinoLogger),
   useLogger: jest.fn(),
+  useGlobalFilters: jest.fn(),
   setGlobalPrefix: jest.fn(),
   enableVersioning: jest.fn(),
   enableCors: jest.fn(),
@@ -35,6 +37,14 @@ describe('configureApp', () => {
       type: VersioningType.URI,
       defaultVersion: '1',
     });
+  });
+
+  it('answers every error with Problem Details', () => {
+    const app = createAppMock();
+
+    configureApp(app as unknown as INestApplication, loadAppConfig({ APP_ENV: 'test' }));
+
+    expect(app.useGlobalFilters).toHaveBeenCalledWith(expect.any(ProblemDetailsFilter));
   });
 
   it('keeps CORS disabled when no origins are configured', () => {
