@@ -10,7 +10,7 @@ Checkout API for a tech accessories store: product catalog, delivery pricing, cu
 
 - Hexagonal architecture per business module: `src/modules/<module>/{domain,application,infrastructure}`.
 - Dependency direction: `infrastructure → application → domain`. Never the other way.
-- `domain/` and `application/` must not import `@nestjs/*`, the AWS SDK, `zod` or any HTTP library. Use cases are plain classes that receive ports through the constructor; wiring happens in infrastructure with `useFactory`.
+- `domain/` and `application/` must not import any npm package or Node module (`@nestjs/*`, the AWS SDK, `zod`, `node:crypto`…). Use cases are plain classes that receive ports through the constructor; wiring happens in infrastructure with `useFactory`. These rules are enforced by `npm run lint:deps`; do not relax them.
 - Railway Oriented Programming: business errors are returned as typed `Result`/`ResultAsync` values (`src/shared/domain`). Do not `throw` for business rules; exceptions are only for unexpected failures.
 - Controllers only map DTO → command, call the use case and map the `Result` to HTTP (Problem Details, RFC 9457).
 - All money amounts are integers in cents and are always computed on the server.
@@ -41,7 +41,10 @@ Checkout API for a tech accessories store: product catalog, delivery pricing, cu
 nvm use                         # Node.js 24
 npm ci
 docker compose up -d dynamodb   # DynamoDB Local on 127.0.0.1:8000
+npm test                        # Jest with coverage gates
+npm run typecheck
 npm run lint
+npm run lint:deps               # hexagonal rules (dependency-cruiser)
 npm run format:check
 ```
 

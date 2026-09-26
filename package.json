@@ -13,6 +13,7 @@
     "start:dev": "nest start --watch --exec \"node --env-file-if-exists=.env\" | pino-pretty",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "lint:deps": "depcruise src test --config .dependency-cruiser.cjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",

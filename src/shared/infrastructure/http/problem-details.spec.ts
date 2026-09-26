@@ -7,9 +7,90 @@ import {
   UnsupportedMediaTypeException,
 } from '@nestjs/common';
 
+import {
+  FakeInsufficientStockError,
+  FakeProductNotFoundError,
+  FakeProviderUnavailableError,
+} from '../../../../test/fakes/fake-domain-errors';
+import { PersistenceError } from '../../domain/persistence-error';
+import { ValidationError } from '../../domain/validation-error';
+
+import { DomainHttpException } from './domain-http.exception';
 import { toProblemDetails } from './problem-details';
 
 const context = { instance: '/api/v1/products', traceId: 'trace-1' };
+
+describe('toProblemDetails with domain errors', () => {
+  it('uses the domain code, curated detail and non-sensitive context', () => {
+    const problem = toProblemDetails(
+      new DomainHttpException(new FakeInsufficientStockError(2)),
+      context,
+    );
+
+    expect(problem).toEqual({
+      type: '/problems/insufficient-stock',
+      title: 'Conflict',
+      status: 409,
+      detail: 'Only 2 units are available for this product.',
+      instance: '/api/v1/products',
+      code: 'INSUFFICIENT_STOCK',
+      traceId: 'trace-1',
+      context: { availableUnits: 2 },
+    });
+  });
+
+  it('omits the context when the error has none', () => {
+    const problem = toProblemDetails(
+      new DomainHttpException(new FakeProductNotFoundError()),
+      context,
+    );
+
+    expect(problem).not.toHaveProperty('context');
+    expect(problem).toMatchObject({ status: 404, code: 'PRODUCT_NOT_FOUND' });
+  });
+
+  it('lists the invalid fields of validation errors', () => {
+    const problem = toProblemDetails(
+      new DomainHttpException(ValidationError.forField('email', 'email must be valid')),
+      context,
+    );
+
+    expect(problem).toMatchObject({
+      status: 400,
+      code: 'VALIDATION_ERROR',
+      errors: [{ field: 'email', message: 'email must be valid' }],
+    });
+  });
+
+  it('keeps expected provider failures with their gateway status and detail', () => {
+    const problem = toProblemDetails(
+      new DomainHttpException(new FakeProviderUnavailableError()),
+      context,
+    );
+
+    expect(problem).toMatchObject({
+      status: 502,
+      code: 'PAYMENT_PROVIDER_UNAVAILABLE',
+      detail: 'The payment provider is not available. Try again in a few minutes.',
+    });
+  });
+
+  it('hides persistence failures behind a generic 500 problem', () => {
+    const problem = toProblemDetails(
+      new DomainHttpException(
+        new PersistenceError('products.findById', new Error('table checkout-app-prod-products')),
+      ),
+      context,
+    );
+
+    expect(problem).toMatchObject({
+      status: 500,
+      code: 'INTERNAL_ERROR',
+      detail: 'An unexpected error occurred.',
+    });
+    expect(JSON.stringify(problem)).not.toContain('products.findById');
+  });
+});
 
 describe('toProblemDetails', () => {
   it('maps an HTTP exception to a problem with a stable code and type', () => {
