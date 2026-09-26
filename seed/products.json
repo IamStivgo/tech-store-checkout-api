@@ -1,0 +1,212 @@
+[
+  {
+    "productId": "7d094266-0b4e-4789-9522-96e1cd7ffa60",
+    "sku": "TEC-CBL-USBC",
+    "name": "Cable USB-C a USB-C 2 m (100 W)",
+    "shortDescription": "Carga rápida de hasta 100 W y transferencia de datos USB 2.0.",
+    "description": "Cable trenzado de 2 metros con carga rápida de hasta 100 W y transferencia de datos USB 2.0.",
+    "priceInCents": 3990000,
+    "weightGrams": 150,
+    "initialStock": 30,
+    "displayOrder": 1,
+    "active": true,
+    "images": [
+      {
+        "basePath": "/images/products/tec-cbl-usbc",
+        "alt": "Cable USB-C trenzado gris enrollado",
+        "width": 640,
+        "height": 640,
+        "formats": ["avif", "webp", "jpg"]
+      }
+    ]
+  },
+  {
+    "productId": "79ab284b-42a1-4b62-b973-10d4c86ba4da",
+    "sku": "TEC-CHG-65W",
+    "name": "Cargador GaN 65 W de 3 puertos",
+    "shortDescription": "Carga portátil y celular al mismo tiempo con tecnología GaN.",
+    "description": "Cargador compacto con tecnología GaN, dos puertos USB-C y uno USB-A para cargar portátil y celular al mismo tiempo.",
+    "priceInCents": 12990000,
+    "weightGrams": 200,
+    "initialStock": 14,
+    "displayOrder": 2,
+    "active": true,
+    "images": [
+      {
+        "basePath": "/images/products/tec-chg-65w",
+        "alt": "Cargador compacto blanco con tres puertos",
+        "width": 640,
+        "height": 640,
+        "formats": ["avif", "webp", "jpg"]
+      }
+    ]
+  },
+  {
+    "productId": "f93bccb7-f451-4b78-ae3a-85f59e114c92",
+    "sku": "TEC-MSE-ERG",
+    "name": "Mouse ergonómico inalámbrico",
+    "shortDescription": "Diseño vertical que reduce la tensión en la muñeca.",
+    "description": "Diseño vertical que reduce la tensión en la muñeca, con conexión Bluetooth, receptor USB y batería recargable.",
+    "priceInCents": 11990000,
+    "weightGrams": 150,
+    "initialStock": 20,
+    "displayOrder": 3,
+    "active": true,
+    "images": [
+      {
+        "basePath": "/images/products/tec-mse-erg",
+        "alt": "Mouse vertical inalámbrico color grafito",
+        "width": 640,
+        "height": 640,
+        "formats": ["avif", "webp", "jpg"]
+      }
+    ]
+  },
+  {
+    "productId": "abb453e5-6495-4592-ab5a-7bd5d40f2615",
+    "sku": "TEC-STD-LAP",
+    "name": "Soporte de aluminio para portátil",
+    "shortDescription": "Eleva la pantalla a la altura de los ojos, con seis niveles de altura.",
+    "description": "Eleva la pantalla a la altura de los ojos, con seis niveles de altura y ventilación para equipos de hasta 17 pulgadas.",
+    "priceInCents": 9990000,
+    "weightGrams": 1100,
+    "initialStock": 12,
+    "displayOrder": 4,
+    "active": true,
+    "images": [
+      {
+        "basePath": "/images/products/tec-std-lap",
+        "alt": "Soporte plegable de aluminio plateado para portátil",
+        "width": 640,
+        "height": 640,
+        "formats": ["avif", "webp", "jpg"]
+      }
+    ]
+  },
+  {
+    "productId": "afcc054d-287e-4003-b26a-c80606ca8557",
+    "sku": "TEC-HUB-7IN1",
+    "name": "Hub USB-C 7 en 1",
+    "shortDescription": "HDMI 4K, puertos USB, lectores de tarjetas, Ethernet y carga de 100 W.",
+    "description": "HDMI 4K, dos USB-A, lector SD y microSD, USB-C con carga de 100 W y Ethernet.",
+    "priceInCents": 14990000,
+    "weightGrams": 120,
+    "initialStock": 10,
+    "displayOrder": 5,
+    "active": true,
+    "images": [
+      {
+        "basePath": "/images/products/tec-hub-7in1",
+        "alt": "Hub USB-C de aluminio gris con varios puertos",
+        "width": 640,
+        "height": 640,
+        "formats": ["avif", "webp", "jpg"]
+      }
+    ]
+  },
+  {
+    "productId": "0f758203-1b3a-46f0-a57d-1a584fef22f7",
+    "sku": "TEC-PWB-20K",
+    "name": "Power bank 20.000 mAh",
+    "shortDescription": "Batería externa con carga rápida de 22,5 W y dos salidas.",
+    "description": "Batería externa con carga rápida de 22,5 W, dos salidas y pantalla de nivel de carga.",
+    "priceInCents": 13990000,
+    "weightGrams": 450,
+    "initialStock": 3,
+    "displayOrder": 6,
+    "active": true,
+    "images": [
+      {
+        "basePath": "/images/products/tec-pwb-20k",
+        "alt": "Batería externa negra mate con pantalla de carga",
+        "width": 640,
+        "height": 640,
+        "formats": ["avif", "webp", "jpg"]
+      }
+    ]
+  },
+  {
+    "productId": "9c91b3b0-7404-4126-a466-60db6a6f3890",
+    "sku": "TEC-ARM-MON",
+    "name": "Brazo articulado para monitor",
+    "shortDescription": "Brazo de acero con resorte de gas para monitores de hasta 32 pulgadas.",
+    "description": "Brazo de acero con resorte de gas para monitores de 17 a 32 pulgadas y hasta 9 kg.",
+    "priceInCents": 13990000,
+    "weightGrams": 3200,
+    "initialStock": 7,
+    "displayOrder": 7,
+    "active": true,
+    "images": [
+      {
+        "basePath": "/images/products/tec-arm-mon",
+        "alt": "Brazo articulado negro para monitor",
+        "width": 640,
+        "height": 640,
+        "formats": ["avif", "webp", "jpg"]
+      }
+    ]
+  },
+  {
+    "productId": "3ec445fd-a9b4-419d-9d99-10d65d846ec5",
+    "sku": "TEC-KBD-75",
+    "name": "Teclado mecánico compacto 75 %",
+    "shortDescription": "Switches intercambiables en caliente, retroiluminación y Bluetooth.",
+    "description": "Switches intercambiables en caliente, retroiluminación y conexión por cable o Bluetooth.",
+    "priceInCents": 24990000,
+    "weightGrams": 900,
+    "initialStock": 6,
+    "displayOrder": 8,
+    "active": true,
+    "images": [
+      {
+        "basePath": "/images/products/tec-kbd-75",
+        "alt": "Teclado mecánico compacto gris con teclas claras",
+        "width": 640,
+        "height": 640,
+        "formats": ["avif", "webp", "jpg"]
+      }
+    ]
+  },
+  {
+    "productId": "458427c7-7dac-4938-a99f-5629bb2ecb65",
+    "sku": "TEC-HPH-ANC",
+    "name": "Audífonos inalámbricos con cancelación de ruido",
+    "shortDescription": "Cancelación activa de ruido y 30 horas de batería.",
+    "description": "Cancelación activa de ruido, 30 horas de batería y micrófonos para llamadas claras.",
+    "priceInCents": 28990000,
+    "weightGrams": 350,
+    "initialStock": 8,
+    "displayOrder": 9,
+    "active": true,
+    "images": [
+      {
+        "basePath": "/images/products/tec-hph-anc",
+        "alt": "Audífonos inalámbricos de diadema azul marino",
+        "width": 640,
+        "height": 640,
+        "formats": ["avif", "webp", "jpg"]
+      }
+    ]
+  },
+  {
+    "productId": "53120397-aeab-4360-894f-9f928059d538",
+    "sku": "TEC-SSD-1TB",
+    "name": "SSD portátil 1 TB (edición limitada)",
+    "shortDescription": "Almacenamiento portátil de 1 TB con velocidades de hasta 1.050 MB/s.",
+    "description": "Almacenamiento portátil de 1 TB con velocidades de hasta 1.050 MB/s y carcasa resistente.",
+    "priceInCents": 35990000,
+    "weightGrams": 100,
+    "initialStock": 0,
+    "displayOrder": 10,
+    "active": true,
+    "images": [
+      {
+        "basePath": "/images/products/tec-ssd-1tb",
+        "alt": "Disco SSD portátil compacto color naranja",
+        "width": 640,
+        "height": 640,
+        "formats": ["avif", "webp", "jpg"]
+      }
+    ]
+  }
+]

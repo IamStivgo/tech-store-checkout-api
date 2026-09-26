@@ -6,13 +6,7 @@ import { err, type Result } from '../../../../shared/domain/result';
 import { Product } from '../../domain/product.entity';
 import { Stock } from '../../domain/stock.vo';
 
-const imageSchema = z.object({
-  basePath: z.string().min(1),
-  alt: z.string(),
-  width: z.number().int().positive(),
-  height: z.number().int().positive(),
-  formats: z.array(z.enum(['avif', 'webp', 'jpg'])).min(1),
-});
+import { productImagesSchema } from './product-images.schema';
 
 const productItemSchema = z.object({
   productId: z.string().min(1),
@@ -26,7 +20,7 @@ const productItemSchema = z.object({
   stockReserved: z.number(),
   stockSold: z.number(),
   weightGrams: z.number(),
-  images: z.tuple([imageSchema], imageSchema),
+  images: productImagesSchema,
   active: z.boolean(),
   displayOrder: z.number(),
   updatedAt: z.iso.datetime(),

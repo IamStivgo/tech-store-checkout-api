@@ -45,18 +45,23 @@ Requisitos: Node.js 24 (`nvm use`) y Docker.
 npm ci
 cp .env.example .env
 docker compose up -d dynamodb   # DynamoDB Local en 127.0.0.1:8000
-npm run start:dev               # http://localhost:3000/api/v1/health
+npm run db:create-tables        # Crea las tablas en DynamoDB Local
+npm run seed                    # Carga el catálogo de 10 productos
+npm run start:dev               # http://localhost:3000/api/v1/products
 ```
 
-| Script                 | Descripción                                                                         |
-| ---------------------- | ----------------------------------------------------------------------------------- |
-| `npm run start:dev`    | Servidor local con recarga y logs legibles                                          |
-| `npm test`             | Pruebas con cobertura (umbrales: 85 % statements, lines y functions; 81 % branches) |
-| `npm run typecheck`    | Verificación de tipos con TypeScript                                                |
-| `npm run lint`         | ESLint con reglas estrictas de TypeScript                                           |
-| `npm run lint:deps`    | Reglas de la arquitectura hexagonal con dependency-cruiser                          |
-| `npm run format:check` | Verifica el formato con Prettier                                                    |
-| `npm run format`       | Aplica el formato con Prettier                                                      |
+| Script                          | Descripción                                                                                                                                     |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run start:dev`             | Servidor local con recarga y logs legibles                                                                                                      |
+| `npm run db:create-tables`      | Crea las tablas en DynamoDB Local; se puede repetir sin problemas. Solo funciona con `DYNAMODB_ENDPOINT` (en AWS las tablas las crea Terraform) |
+| `npm run seed`                  | Carga o actualiza el catálogo de `seed/products.json` sin reiniciar el stock de los productos existentes                                        |
+| `npm run seed -- --reset-stock` | Igual, pero reinicia el stock al valor inicial del seed                                                                                         |
+| `npm test`                      | Pruebas con cobertura (umbrales: 85 % statements, lines y functions; 81 % branches)                                                             |
+| `npm run typecheck`             | Verificación de tipos con TypeScript                                                                                                            |
+| `npm run lint`                  | ESLint con reglas estrictas de TypeScript                                                                                                       |
+| `npm run lint:deps`             | Reglas de la arquitectura hexagonal con dependency-cruiser                                                                                      |
+| `npm run format:check`          | Verifica el formato con Prettier                                                                                                                |
+| `npm run format`                | Aplica el formato con Prettier                                                                                                                  |
 
 `docker compose down -v` detiene DynamoDB Local y borra sus datos.
 
