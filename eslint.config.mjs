@@ -59,7 +59,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['scripts/**/*.ts'],
+    files: ['scripts/**/*.{ts,mjs}'],
     rules: {
       'no-console': 'off',
     },
