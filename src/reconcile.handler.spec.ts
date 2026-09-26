@@ -1,12 +1,14 @@
 import { NestFactory } from '@nestjs/core';
 
+import { TEST_ENV } from '../test/builders/app-config.builder';
+
 import { createReconcileHandler } from './reconcile.handler';
 
 describe('Reconciliation Lambda handler', () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
-    process.env = { ...originalEnv, APP_ENV: 'test', LOG_LEVEL: 'silent' };
+    process.env = { ...originalEnv, ...TEST_ENV };
   });
 
   afterEach(() => {

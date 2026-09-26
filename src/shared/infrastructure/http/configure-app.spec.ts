@@ -1,7 +1,7 @@
 import { VersioningType, type INestApplication } from '@nestjs/common';
 import { Logger } from 'nestjs-pino';
 
-import { loadAppConfig } from '../../../config/app-config';
+import { aConfig } from '../../../../test/builders/app-config.builder';
 
 import { configureApp } from './configure-app';
 import { ProblemDetailsFilter } from './problem-details.filter';
@@ -21,7 +21,7 @@ describe('configureApp', () => {
   it('uses the pino logger for the application logs', () => {
     const app = createAppMock();
 
-    configureApp(app as unknown as INestApplication, loadAppConfig({ APP_ENV: 'test' }));
+    configureApp(app as unknown as INestApplication, aConfig());
 
     expect(app.get).toHaveBeenCalledWith(Logger);
     expect(app.useLogger).toHaveBeenCalledWith(pinoLogger);
@@ -30,7 +30,7 @@ describe('configureApp', () => {
   it('exposes routes under /api with URI versioning defaulting to v1', () => {
     const app = createAppMock();
 
-    configureApp(app as unknown as INestApplication, loadAppConfig({ APP_ENV: 'test' }));
+    configureApp(app as unknown as INestApplication, aConfig());
 
     expect(app.setGlobalPrefix).toHaveBeenCalledWith('api');
     expect(app.enableVersioning).toHaveBeenCalledWith({
@@ -42,7 +42,7 @@ describe('configureApp', () => {
   it('answers every error with Problem Details', () => {
     const app = createAppMock();
 
-    configureApp(app as unknown as INestApplication, loadAppConfig({ APP_ENV: 'test' }));
+    configureApp(app as unknown as INestApplication, aConfig());
 
     expect(app.useGlobalFilters).toHaveBeenCalledWith(expect.any(ProblemDetailsFilter));
   });
@@ -50,17 +50,14 @@ describe('configureApp', () => {
   it('keeps CORS disabled when no origins are configured', () => {
     const app = createAppMock();
 
-    configureApp(app as unknown as INestApplication, loadAppConfig({ APP_ENV: 'prod' }));
+    configureApp(app as unknown as INestApplication, aConfig({ APP_ENV: 'prod' }));
 
     expect(app.enableCors).not.toHaveBeenCalled();
   });
 
   it('enables CORS only for the configured origins', () => {
     const app = createAppMock();
-    const config = loadAppConfig({
-      APP_ENV: 'local',
-      CORS_ALLOWED_ORIGINS: 'http://localhost:5173',
-    });
+    const config = aConfig({ APP_ENV: 'local', CORS_ALLOWED_ORIGINS: 'http://localhost:5173' });
 
     configureApp(app as unknown as INestApplication, config);
 

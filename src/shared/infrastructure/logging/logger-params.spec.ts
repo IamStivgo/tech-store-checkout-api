@@ -3,14 +3,14 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import pino from 'pino';
 import type { Options } from 'pino-http';
 
-import { loadAppConfig } from '../../../config/app-config';
+import { aConfig } from '../../../../test/builders/app-config.builder';
 
 import { buildLoggerParams, REDACTION_CENSOR, resolveRequestId } from './logger-params';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 const pinoHttpOptions = (logLevel = 'info'): Options =>
-  buildLoggerParams(loadAppConfig({ APP_ENV: 'test', LOG_LEVEL: logLevel })).pinoHttp as Options;
+  buildLoggerParams(aConfig({ LOG_LEVEL: logLevel })).pinoHttp as Options;
 
 const requestWith = (headers: IncomingMessage['headers']): IncomingMessage =>
   ({ headers }) as IncomingMessage;
