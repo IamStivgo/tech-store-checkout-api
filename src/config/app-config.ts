@@ -9,6 +9,9 @@ const MAX_PORT = 65_535;
 const DEFAULT_AWS_REGION = 'us-east-1';
 const DEFAULT_LOW_STOCK_THRESHOLD = 3;
 const DEFAULT_MAX_UNITS_PER_ORDER = 5;
+// Business rules §7: COP 3.000 service fee and free shipping from COP 150.000, in cents.
+const DEFAULT_SERVICE_FEE_IN_CENTS = 300_000;
+const DEFAULT_FREE_SHIPPING_THRESHOLD_IN_CENTS = 15_000_000;
 
 const appConfigSchema = z.object({
   APP_ENV: z.enum(APP_ENVS),
@@ -29,6 +32,12 @@ const appConfigSchema = z.object({
   TABLE_PRODUCTS: z.string().trim().min(1),
   LOW_STOCK_THRESHOLD: z.coerce.number().int().min(0).default(DEFAULT_LOW_STOCK_THRESHOLD),
   MAX_UNITS_PER_ORDER: z.coerce.number().int().min(1).default(DEFAULT_MAX_UNITS_PER_ORDER),
+  SERVICE_FEE_IN_CENTS: z.coerce.number().int().min(0).default(DEFAULT_SERVICE_FEE_IN_CENTS),
+  FREE_SHIPPING_THRESHOLD_IN_CENTS: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .default(DEFAULT_FREE_SHIPPING_THRESHOLD_IN_CENTS),
 });
 
 export type AppEnv = (typeof APP_ENVS)[number];
@@ -49,6 +58,10 @@ export interface AppConfig {
   readonly catalog: {
     readonly lowStockThreshold: number;
     readonly maxUnitsPerOrder: number;
+  };
+  readonly pricing: {
+    readonly serviceFeeInCents: number;
+    readonly freeShippingThresholdInCents: number;
   };
 }
 
@@ -75,6 +88,10 @@ export const loadAppConfig = (env: Readonly<Record<string, string | undefined>>)
     catalog: {
       lowStockThreshold: config.LOW_STOCK_THRESHOLD,
       maxUnitsPerOrder: config.MAX_UNITS_PER_ORDER,
+    },
+    pricing: {
+      serviceFeeInCents: config.SERVICE_FEE_IN_CENTS,
+      freeShippingThresholdInCents: config.FREE_SHIPPING_THRESHOLD_IN_CENTS,
     },
   };
 };
