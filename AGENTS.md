@@ -18,7 +18,7 @@ Checkout API for a tech accessories store: product catalog, delivery pricing, cu
 ## Code conventions
 
 - Identifiers, code, comments and commit messages in English. The README is in Spanish.
-- File names in `kebab-case` with a role suffix: `.entity.ts`, `.vo.ts`, `.port.ts`, `.use-case.ts`, `.controller.ts`, `.dto.ts`, `.adapter.ts`, `.mapper.ts`, `.spec.ts`.
+- File names in `kebab-case` with a role suffix: `.entity.ts`, `.vo.ts`, `.port.ts`, `.use-case.ts`, `.controller.ts`, `.dto.ts`, `.adapter.ts`, `.mapper.ts`, `.response.ts`, `.openapi.ts`, `.spec.ts`.
 - No `export default`, no `any`, `readonly` by default, small functions, no magic numbers.
 - Comments only for non-obvious constraints.
 
@@ -47,13 +47,21 @@ npm run lint
 npm run lint:deps               # hexagonal rules (dependency-cruiser)
 npm run format:check
 npm run package:lambda          # webpack bundle → dist-lambda/{lambda,reconcile}.js + dist-lambda.zip
-npm run test:bundle             # smoke test of the real bundle (node:test)
+npm run build:api-docs          # static Swagger UI → dist-api-docs/ (published under /api-docs/)
+npm run test:artifacts          # smoke tests of dist-lambda/ and dist-api-docs/ (node:test)
+npm run openapi:export          # regenerate docs/openapi.json after any API change
 ```
+
+## OpenAPI contract
+
+- `docs/openapi.json` is the contract the web repository generates its types from. It is generated from the controllers (`npm run openapi:export`) and committed; `test/api/openapi.api.spec.ts` fails when it is out of date.
+- Document every endpoint with `@ApiTags`, `@ApiOperation`, `@ApiOkResponse` and `ApiProblemResponses(...)` (errors are Problem Details).
+- Response schemas are classes in `*.openapi.ts` that `implements` the response interface (`*.response.ts` or presenter types) and use `@ApiSchema({ name })`, so TypeScript keeps docs and code in sync. Keep response interfaces out of controllers to avoid import cycles.
 
 ## Lambda bundle
 
 - `webpack.lambda.config.mjs` bundles `src/lambda.ts` and `src/reconcile.handler.ts` into self-contained `lambda.js` and `reconcile.js` at the zip root. The infrastructure configures the handlers `lambda.handler` and `reconcile.handler`: keep the file names and the `handler` exports.
-- Do not add lazily-required Nest integrations or packages that load files at runtime without checking `npm run test:bundle`. New webpack warnings are errors to investigate, not noise: only the known optional requires are ignored.
+- Do not add lazily-required Nest integrations or packages that load files at runtime without checking `npm run test:artifacts`. New webpack warnings are errors to investigate, not noise: only the known optional requires are ignored.
 - The bundle is not minified on purpose (readable class names in logs). Cold start measured at ~0.4 s `Init Duration`.
 
 ## Git workflow

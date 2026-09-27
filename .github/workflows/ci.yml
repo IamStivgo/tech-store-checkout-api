@@ -68,8 +68,11 @@ jobs:
       - name: Build Lambda bundle
         run: npm run package:lambda
 
-      - name: Smoke test Lambda bundle
-        run: npm run test:bundle
+      - name: Build API docs site
+        run: npm run build:api-docs
+
+      - name: Smoke test build artifacts
+        run: npm run test:artifacts
 
       - name: Audit dependencies
         run: npm audit --audit-level=high
