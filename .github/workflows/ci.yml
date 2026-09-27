@@ -65,5 +65,11 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Build Lambda bundle
+        run: npm run package:lambda
+
+      - name: Smoke test Lambda bundle
+        run: npm run test:bundle
+
       - name: Audit dependencies
         run: npm audit --audit-level=high

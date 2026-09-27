@@ -62,6 +62,8 @@ npm run start:dev               # http://localhost:3000/api/v1/products
 | `npm run lint:deps`             | Reglas de la arquitectura hexagonal con dependency-cruiser                                                                                      |
 | `npm run format:check`          | Verifica el formato con Prettier                                                                                                                |
 | `npm run format`                | Aplica el formato con Prettier                                                                                                                  |
+| `npm run package:lambda`        | Bundle de webpack para Lambda: `dist-lambda/lambda.js` y `reconcile.js` (autocontenidos) y `dist-lambda.zip`                                    |
+| `npm run test:bundle`           | Prueba de humo del bundle real: health, datos empaquetados, Problem Details y conciliación                                                      |
 
 `docker compose down -v` detiene DynamoDB Local y borra sus datos.
 
