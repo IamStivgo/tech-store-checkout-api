@@ -2,7 +2,8 @@
 // It loads the same files Lambda loads, so it catches what unit tests cannot: modules webpack
 // failed to include, lazy requires, bundled JSON data and the handler export contract.
 import assert from 'node:assert/strict';
-import { existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { before, describe, it } from 'node:test';
@@ -86,6 +87,24 @@ describe('Lambda bundle', () => {
 
     assert.equal(response.statusCode, 404);
     assert.match(response.headers['content-type'], /^application\/problem\+json/);
+  });
+
+  it('carries the package version when the function defines no APP_VERSION', () => {
+    const env = { ...process.env };
+    delete env.APP_VERSION;
+    const reported = execFileSync(
+      process.execPath,
+      [
+        '-p',
+        `require(${JSON.stringify(path.join(BUNDLE_DIR, 'lambda.js'))}), process.env.APP_VERSION`,
+      ],
+      { env, encoding: 'utf8' },
+    ).trim();
+    const { version } = JSON.parse(
+      readFileSync(path.resolve(BUNDLE_DIR, '../package.json'), 'utf8'),
+    );
+
+    assert.match(reported, new RegExp(`^${version.replaceAll('.', '\\.')}(\\+[0-9a-f]+)?$`));
   });
 
   it('runs the reconciliation handler', async () => {

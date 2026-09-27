@@ -69,6 +69,18 @@ npm run start:dev               # http://localhost:3000/api/v1/products
 
 `docker compose down -v` detiene DynamoDB Local y borra sus datos.
 
+## Despliegue (GitHub Actions con OIDC, sin llaves de AWS)
+
+La infraestructura (Lambdas, API Gateway, CloudFront, tablas y roles) vive en [tech-store-checkout-infra](https://github.com/IamStivgo/tech-store-checkout-infra); este repositorio solo despliega su código. Los nombres de los recursos se leen de los parámetros SSM `/checkout-app/prod/deploy/*`.
+
+| Workflow      | Cuándo                                             | Qué hace                                                                                                                                                                                                                                                                                                 |
+| ------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `deploy.yml`  | Cuando el CI de `main` termina en verde (o manual) | Tras la aprobación del environment `production`: bundle y Swagger UI → nuevo código en las Lambdas `api` y `reconcile` → versión publicada y alias `live` movido → `api-docs/` en S3 e invalidación → prueba de `/api/v1/health` por CloudFront. Si la prueba falla, `live` vuelve a la versión anterior |
+| `seed.yml`    | Manual                                             | Carga o actualiza el catálogo en producción (opción para reiniciar el stock)                                                                                                                                                                                                                             |
+| `release.yml` | Tag `v*`                                           | Verifica que el tag coincida con la versión de `package.json` y del contrato y crea el release con `openapi.json` adjunto (el repositorio web genera sus tipos desde ahí)                                                                                                                                |
+
+Configuración del repositorio: variable `AWS_REGION` y secrets `AWS_DEPLOY_ROLE_ARN` y `AWS_SEED_ROLE_ARN` (contienen el ID de la cuenta: como secrets se enmascaran en los logs). El endpoint `GET /api/v1/health` informa la versión desplegada (`<versión>+<commit>`).
+
 ## Flujo de trabajo
 
 - Ramas: `main` (estable), `develop` (integración) y `feature/HU-xxx-descripcion`.

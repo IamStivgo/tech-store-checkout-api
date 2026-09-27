@@ -64,6 +64,12 @@ npm run openapi:export          # regenerate docs/openapi.json after any API cha
 - Do not add lazily-required Nest integrations or packages that load files at runtime without checking `npm run test:artifacts`. New webpack warnings are errors to investigate, not noise: only the known optional requires are ignored.
 - The bundle is not minified on purpose (readable class names in logs). Cold start measured at ~0.4 s `Init Duration`.
 
+## Deployment
+
+- `deploy.yml` runs after CI succeeds on `main`, in the `production` environment, with the OIDC role from `secrets.AWS_DEPLOY_ROLE_ARN`. It reads resource names from `/checkout-app/prod/deploy/*`, publishes a version per function, moves the `live` alias and rolls it back if the health smoke test fails. Never hard-code AWS resource names or account IDs, and never print the account ID.
+- The version is injected into the bundle (`APP_VERSION`, `<package version>+<commit>`); bump `package.json` and run `npm run openapi:export` before a release. `release.yml` fails if the tag, the package version and the contract version differ.
+- `seed.yml` (manual) only upserts products; the seed role cannot write other tables.
+
 ## Git workflow
 
 - Branches: `main` (stable), `develop` (integration), `feature/HU-xxx-description`.
