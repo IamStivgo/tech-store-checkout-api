@@ -9,6 +9,20 @@ updates:
     groups:
       minor-and-patch:
         update-types: [minor, patch]
+    # Major versions are adopted deliberately, not by bot: NestJS stays on 11, TypeScript on
+    # ~5.9 (ts-jest and typescript-eslint do not support 7 yet), ESLint on 9 and the Node.js
+    # types on 24 to match the Lambda runtime.
+    ignore:
+      - dependency-name: '@nestjs/*'
+        update-types: [version-update:semver-major]
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+      - dependency-name: eslint
+        update-types: [version-update:semver-major]
+      - dependency-name: '@eslint/js'
+        update-types: [version-update:semver-major]
+      - dependency-name: '@types/node'
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: github-actions
     directory: /
