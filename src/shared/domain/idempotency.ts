@@ -6,6 +6,8 @@ export type IdempotencyStatus = 'IN_PROGRESS' | 'COMPLETED';
 export interface StoredResponse {
   readonly statusCode: number;
   readonly body: string;
+  /** Headers the replay must repeat, such as the Location of a created resource. */
+  readonly headers: Readonly<Record<string, string>>;
 }
 
 export interface IdempotencyRecord {

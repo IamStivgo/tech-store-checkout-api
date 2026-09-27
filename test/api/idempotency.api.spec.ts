@@ -1,4 +1,5 @@
-import { Body, Controller, Post, type INestApplication } from '@nestjs/common';
+import { Body, Controller, Post, Res, type INestApplication } from '@nestjs/common';
+import type { Response } from 'express';
 import request from 'supertest';
 import type { App } from 'supertest/types';
 
@@ -25,8 +26,12 @@ let executions = 0;
 class IdempotentTestController {
   @Post('orders')
   @Idempotent()
-  create(@Body() body: Record<string, unknown>): Record<string, unknown> {
+  create(
+    @Body() body: Record<string, unknown>,
+    @Res({ passthrough: true }) response: Response,
+  ): Record<string, unknown> {
     executions += 1;
+    response.location(`${ORDERS_PATH}/${executions}`);
     return { orderNumber: executions, ...body };
   }
 
@@ -99,7 +104,11 @@ describe('Idempotent endpoints', () => {
     expect(response.headers['idempotent-replayed']).toBeUndefined();
     expect(records.records.get(`POST ${ORDERS_PATH}#${KEY}`)).toMatchObject({
       status: 'COMPLETED',
-      response: { statusCode: 201, body: '{"orderNumber":1,"quantity":1}' },
+      response: {
+        statusCode: 201,
+        body: '{"orderNumber":1,"quantity":1}',
+        headers: { Location: `${ORDERS_PATH}/1` },
+      },
     });
   });
 
@@ -110,6 +119,7 @@ describe('Idempotent endpoints', () => {
 
     expect(repeat.status).toBe(201);
     expect(repeat.headers['idempotent-replayed']).toBe('true');
+    expect(repeat.headers.location).toBe(`${ORDERS_PATH}/1`);
     expect(repeat.body).toEqual({ orderNumber: 1, quantity: 1, color: 'black' });
     expect(executions).toBe(1);
   });

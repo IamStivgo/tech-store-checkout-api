@@ -87,6 +87,7 @@ describe('DynamoDbIdempotencyRepository', () => {
           status: 'COMPLETED',
           responseStatusCode: 201,
           responseBody: '{"id":"c-1"}',
+          responseHeaders: { Location: '/api/v1/customers/c-1' },
           createdAt: '2026-09-24T20:15:00.000Z',
           expiresAt: NOW_EPOCH + 86_400,
         },
@@ -95,13 +96,33 @@ describe('DynamoDbIdempotencyRepository', () => {
       expect(unwrap(await repository.find(SCOPE))).toEqual({
         ...RECORD,
         status: 'COMPLETED',
-        response: { statusCode: 201, body: '{"id":"c-1"}' },
+        response: {
+          statusCode: 201,
+          body: '{"id":"c-1"}',
+          headers: { Location: '/api/v1/customers/c-1' },
+        },
       });
       expect(dynamo.commandCalls(GetCommand)[0]?.args[0].input).toEqual({
         TableName: TABLE,
         Key: { idempotencyKey: SCOPE },
         ConsistentRead: true,
       });
+    });
+
+    it('maps a completed record without stored headers to an empty set', async () => {
+      dynamo.on(GetCommand).resolves({
+        Item: {
+          idempotencyKey: SCOPE,
+          requestHash: 'a1b2c3',
+          status: 'COMPLETED',
+          responseStatusCode: 409,
+          responseBody: '{"code":"INSUFFICIENT_STOCK"}',
+          createdAt: '2026-09-24T20:15:00.000Z',
+          expiresAt: NOW_EPOCH + 86_400,
+        },
+      });
+
+      expect(unwrap(await repository.find(SCOPE))?.response?.headers).toEqual({});
     });
 
     it('maps a record in progress without a response', async () => {
@@ -145,7 +166,13 @@ describe('DynamoDbIdempotencyRepository', () => {
     it('stores the response of an existing record', async () => {
       dynamo.on(UpdateCommand).resolves({});
 
-      unwrap(await repository.complete(SCOPE, { statusCode: 201, body: '{"id":"c-1"}' }));
+      unwrap(
+        await repository.complete(SCOPE, {
+          statusCode: 201,
+          body: '{"id":"c-1"}',
+          headers: { Location: '/api/v1/customers/c-1' },
+        }),
+      );
 
       expect(dynamo.commandCalls(UpdateCommand)[0]?.args[0].input).toMatchObject({
         TableName: TABLE,
@@ -155,6 +182,7 @@ describe('DynamoDbIdempotencyRepository', () => {
           ':completed': 'COMPLETED',
           ':code': 201,
           ':body': '{"id":"c-1"}',
+          ':headers': { Location: '/api/v1/customers/c-1' },
         },
       });
     });
@@ -162,14 +190,16 @@ describe('DynamoDbIdempotencyRepository', () => {
     it('ignores a record released in the meantime instead of recreating it', async () => {
       dynamo.on(UpdateCommand).rejects(conditionFailed());
 
-      expect((await repository.complete(SCOPE, { statusCode: 201, body: '{}' })).isOk).toBe(true);
+      expect(
+        (await repository.complete(SCOPE, { statusCode: 201, body: '{}', headers: {} })).isOk,
+      ).toBe(true);
     });
 
     it('reports other failures', async () => {
       dynamo.on(UpdateCommand).rejects(new Error('throttled'));
 
       expect(
-        await failureOf(repository.complete(SCOPE, { statusCode: 201, body: '{}' })),
+        await failureOf(repository.complete(SCOPE, { statusCode: 201, body: '{}', headers: {} })),
       ).toMatchObject({
         operation: 'idempotency.complete',
       });

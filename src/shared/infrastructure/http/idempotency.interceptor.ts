@@ -26,6 +26,9 @@ import { hashRequestBody } from './request-hash';
 export const IDEMPOTENCY_KEY_HEADER = 'Idempotency-Key';
 export const IDEMPOTENT_REPLAYED_HEADER = 'Idempotent-Replayed';
 
+// Response headers that are part of the result and must be repeated by a replay.
+const REPLAYED_RESPONSE_HEADERS = ['Location'] as const;
+
 const MIN_ERROR_STATUS = 400;
 const MIN_SERVER_ERROR_STATUS = 500;
 
@@ -38,6 +41,14 @@ const parseIdempotencyKey = (header: string | undefined): string | undefined => 
 };
 
 const serialize = (body: unknown): string => JSON.stringify(body ?? null);
+
+const replayedHeadersOf = (response: Response): Record<string, string> =>
+  Object.fromEntries(
+    REPLAYED_RESPONSE_HEADERS.flatMap((name) => {
+      const value = response.getHeader(name);
+      return typeof value === 'string' ? [[name, value]] : [];
+    }),
+  );
 
 /**
  * Runs a request once per Idempotency-Key (api-contract §3): repeats are answered with the
@@ -83,6 +94,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
           this.idempotency.complete(scope, {
             statusCode: response.statusCode,
             body: serialize(body),
+            headers: replayedHeadersOf(response),
           }),
         );
         return body;
@@ -98,6 +110,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
         ? this.idempotency.complete(scope, {
             statusCode: problem.status,
             body: serialize(problem),
+            headers: {},
           })
         : this.idempotency.release(scope),
     );
@@ -116,6 +129,9 @@ export class IdempotencyInterceptor implements NestInterceptor {
 
 const replay = (stored: StoredResponse, response: Response): unknown => {
   response.status(stored.statusCode).setHeader(IDEMPOTENT_REPLAYED_HEADER, 'true');
+  for (const [name, value] of Object.entries(stored.headers)) {
+    response.setHeader(name, value);
+  }
   if (stored.statusCode >= MIN_ERROR_STATUS) {
     response.setHeader('Cache-Control', 'no-store').type(PROBLEM_JSON_CONTENT_TYPE);
   }

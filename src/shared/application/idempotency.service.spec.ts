@@ -8,7 +8,7 @@ import { IdempotencyService, type IdempotencyStart } from './idempotency.service
 
 const SCOPE = 'POST /api/v1/customers#8f14e45f-ceea-4e67-9a2b-3c1d2e3f4a5b';
 const HASH = 'a1b2c3';
-const CREATED: StoredResponse = { statusCode: 201, body: '{"id":"c-1"}' };
+const CREATED: StoredResponse = { statusCode: 201, body: '{"id":"c-1"}', headers: {} };
 
 class MovableClock implements Clock {
   constructor(private current: Date) {}
