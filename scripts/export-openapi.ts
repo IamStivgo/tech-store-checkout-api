@@ -14,7 +14,12 @@ import {
 import { contractVersion, OPENAPI_FILE } from './openapi/contract';
 
 // The document only depends on controllers and decorators: no AWS access is needed.
-const EXPORT_ENV = { APP_ENV: 'local', LOG_LEVEL: 'silent', TABLE_PRODUCTS: 'openapi-export' };
+const EXPORT_ENV = {
+  APP_ENV: 'local',
+  LOG_LEVEL: 'silent',
+  TABLE_PRODUCTS: 'openapi-export',
+  TABLE_IDEMPOTENCY: 'openapi-export',
+};
 
 const main = async (): Promise<void> => {
   Object.assign(process.env, { ...EXPORT_ENV, ...process.env });

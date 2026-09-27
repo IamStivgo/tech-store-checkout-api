@@ -1,12 +1,12 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 
-import type { AppConfig } from '../../../config/app-config';
+import type { DynamoDbConnection } from '../../../config/app-config';
 
 // DynamoDB Local accepts any credentials, but the SDK still needs some to sign requests.
 const LOCAL_CREDENTIALS = { accessKeyId: 'local', secretAccessKey: 'local' };
 
-export const createDynamoDbClient = (config: AppConfig): DynamoDBClient =>
+export const createDynamoDbClient = (config: DynamoDbConnection): DynamoDBClient =>
   new DynamoDBClient({
     region: config.awsRegion,
     ...(config.dynamodbEndpoint
@@ -14,7 +14,7 @@ export const createDynamoDbClient = (config: AppConfig): DynamoDBClient =>
       : {}),
   });
 
-export const createDynamoDbDocumentClient = (config: AppConfig): DynamoDBDocumentClient =>
+export const createDynamoDbDocumentClient = (config: DynamoDbConnection): DynamoDBDocumentClient =>
   DynamoDBDocumentClient.from(createDynamoDbClient(config), {
     marshallOptions: { removeUndefinedValues: true },
   });
