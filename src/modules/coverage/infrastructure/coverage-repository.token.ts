@@ -1,0 +1,1 @@
+export const COVERAGE_REPOSITORY = Symbol('COVERAGE_REPOSITORY');

@@ -1,0 +1,120 @@
+name: Deploy
+
+# Deploys what CI has just verified on main; can also be re-run by hand.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-api-prod
+  cancel-in-progress: false
+
+env:
+  HUSKY: '0'
+
+jobs:
+  deploy:
+    name: Deploy to production
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    # Requires the reviewer's approval, and only main may deploy to production.
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Lambda bundle and API docs
+        run: |
+          APP_VERSION="$(node -p "require('./package.json').version")+${GITHUB_SHA::7}"
+          export APP_VERSION
+          npm run package:lambda
+          npm run build:api-docs
+          npm run test:artifacts
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: deploy-api-${{ github.run_id }}
+          mask-aws-account-id: true
+
+      # Resource names come from the infrastructure, never from this repository.
+      - name: Read deploy parameters
+        run: |
+          read_parameter() {
+            aws ssm get-parameter --name "/checkout-app/prod/deploy/$1" --query Parameter.Value --output text
+          }
+          {
+            echo "API_FUNCTION=$(read_parameter api-function)"
+            echo "RECONCILE_FUNCTION=$(read_parameter reconcile-function)"
+            echo "SPA_BUCKET=$(read_parameter spa-bucket)"
+            echo "DISTRIBUTION_ID=$(read_parameter distribution-id)"
+            echo "APP_URL=$(read_parameter app-url)"
+          } >> "$GITHUB_ENV"
+
+      - name: Deploy functions
+        run: |
+          for function in "$API_FUNCTION" "$RECONCILE_FUNCTION"; do
+            previous="$(aws lambda get-alias --function-name "$function" --name live --query FunctionVersion --output text)"
+            aws lambda update-function-code --function-name "$function" --zip-file fileb://dist-lambda.zip > /dev/null
+            aws lambda wait function-updated-v2 --function-name "$function"
+            version="$(aws lambda publish-version --function-name "$function" \
+              --description "${GITHUB_SHA::12} run ${GITHUB_RUN_ID}" --query Version --output text)"
+            aws lambda update-alias --function-name "$function" --name live --function-version "$version" > /dev/null
+            echo "${function}: live ${previous} -> ${version}" | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "PREVIOUS_${function//-/_}=${previous}" >> "$GITHUB_ENV"
+          done
+
+      - name: Publish API docs
+        run: |
+          aws s3 sync dist-api-docs/ "s3://${SPA_BUCKET}/api-docs/" --delete \
+            --cache-control "public, max-age=300" --only-show-errors
+          aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION_ID" \
+            --paths "/api-docs/*" > /dev/null
+
+      - name: Smoke test
+        run: |
+          for attempt in 1 2 3 4 5; do
+            if curl -fsS "${APP_URL}/api/v1/health" | grep -q '"status":"ok"'; then
+              echo "Health check passed: ${APP_URL}/api/v1/health" | tee -a "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            sleep $((attempt * 5))
+          done
+          echo "Health check failed" >&2
+          exit 1
+
+      # A failed smoke test puts the previous versions back behind the live aliases.
+      - name: Roll back
+        if: failure()
+        run: |
+          for function in "$API_FUNCTION" "$RECONCILE_FUNCTION"; do
+            variable="PREVIOUS_${function//-/_}"
+            if [ -n "${!variable:-}" ]; then
+              aws lambda update-alias --function-name "$function" --name live \
+                --function-version "${!variable}" > /dev/null
+              echo "${function}: rolled back to ${!variable}" | tee -a "$GITHUB_STEP_SUMMARY"
+            fi
+          done

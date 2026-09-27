@@ -1,0 +1,66 @@
+name: Seed
+
+# Loads or refreshes the product catalog in production. Existing stock is kept unless
+# reset_stock is checked.
+on:
+  workflow_dispatch:
+    inputs:
+      reset_stock:
+        description: Reset the stock of every product to its seed value
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seed-prod
+  cancel-in-progress: false
+
+env:
+  HUSKY: '0'
+
+jobs:
+  seed:
+    name: Seed products
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # The seed role can only read the table name and update items of the products table.
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_SEED_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: seed-${{ github.run_id }}
+          mask-aws-account-id: true
+
+      - name: Seed products
+        env:
+          APP_ENV: prod
+          RESET_STOCK: ${{ inputs.reset_stock }}
+        run: |
+          TABLE_PRODUCTS="$(aws ssm get-parameter --name /checkout-app/prod/deploy/products-table \
+            --query Parameter.Value --output text)"
+          export TABLE_PRODUCTS
+          if [ "$RESET_STOCK" = "true" ]; then
+            npm run seed -- --reset-stock | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            npm run seed | tee -a "$GITHUB_STEP_SUMMARY"
+          fi

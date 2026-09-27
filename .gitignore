@@ -3,11 +3,13 @@ node_modules/
 
 # Build output
 dist/
+dist-lambda/
+dist-api-docs/
 *.zip
 *.tsbuildinfo
 
 # Tests
-coverage/
+/coverage/
 
 # Environment and secrets
 .env
@@ -17,10 +19,6 @@ coverage/
 
 # Logs
 *.log
-npm-debug.log*
 
-# OS and editors
-.DS_Store
-.idea/
-.vscode/*
-!.vscode/extensions.json
+# Editor
+.vscode/

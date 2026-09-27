@@ -1,0 +1,6 @@
+dist/
+dist-lambda/
+dist-api-docs/
+/coverage/
+package-lock.json
+docs/openapi.json
