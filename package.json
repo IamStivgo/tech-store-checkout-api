@@ -9,6 +9,8 @@
   },
   "scripts": {
     "build": "nest build",
+    "build:lambda": "webpack --config webpack.lambda.config.mjs",
+    "package:lambda": "npm run build:lambda && cd dist-lambda && rm -f ../dist-lambda.zip && zip -qr -X ../dist-lambda.zip lambda.js reconcile.js",
     "start": "node --env-file-if-exists=.env dist/main.js",
     "start:dev": "nest start --watch --exec \"node --env-file-if-exists=.env\" | pino-pretty",
     "lint": "eslint .",
@@ -21,6 +23,7 @@
     "seed": "node --env-file-if-exists=.env -r ts-node/register/transpile-only scripts/seed.ts",
     "coverage:build": "node -r ts-node/register/transpile-only scripts/build-coverage-data.ts && prettier --write src/modules/coverage/infrastructure/coverage-data.json",
     "test": "jest --coverage",
+    "test:bundle": "node --test test/bundle/lambda-bundle.test.mjs",
     "prepare": "husky"
   },
   "dependencies": {
@@ -73,6 +76,8 @@
     "ts-loader": "^9.6.2",
     "ts-node": "^10.9.2",
     "typescript": "~5.9",
-    "typescript-eslint": "^8.70.1"
+    "typescript-eslint": "^8.70.1",
+    "webpack": "^5.111.1",
+    "webpack-cli": "^7.2.3"
   }
 }
