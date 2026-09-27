@@ -18,6 +18,7 @@ const EXPORT_ENV = {
   APP_ENV: 'local',
   LOG_LEVEL: 'silent',
   TABLE_PRODUCTS: 'openapi-export',
+  TABLE_CUSTOMERS: 'openapi-export',
   TABLE_IDEMPOTENCY: 'openapi-export',
 };
 

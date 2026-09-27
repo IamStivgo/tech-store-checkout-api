@@ -22,6 +22,8 @@ describe('OpenAPI contract', () => {
   it('documents every public endpoint under /api/v1', () => {
     expect(Object.keys(document.paths).sort()).toEqual([
       '/api/v1/checkout/quote',
+      '/api/v1/customers',
+      '/api/v1/customers/{customerId}',
       '/api/v1/health',
       '/api/v1/locations/departments',
       '/api/v1/locations/departments/{departmentCode}/cities',
@@ -38,6 +40,8 @@ describe('OpenAPI contract', () => {
 
     expect(operationIds.sort()).toEqual([
       'checkoutQuote',
+      'customersCreate',
+      'customersDetail',
       'healthCheck',
       'locationsCities',
       'locationsDepartments',

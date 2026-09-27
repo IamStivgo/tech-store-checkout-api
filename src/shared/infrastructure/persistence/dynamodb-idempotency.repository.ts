@@ -24,6 +24,7 @@ const itemSchema = z.object({
   status: z.enum(['IN_PROGRESS', 'COMPLETED']),
   responseStatusCode: z.number().int().optional(),
   responseBody: z.string().optional(),
+  responseHeaders: z.record(z.string(), z.string()).optional(),
   createdAt: z.iso.datetime(),
   expiresAt: z.number().int(),
 });
@@ -33,7 +34,13 @@ const toRecord = (item: z.infer<typeof itemSchema>): IdempotencyRecord => ({
   requestHash: item.requestHash,
   status: item.status,
   ...(item.responseStatusCode !== undefined && item.responseBody !== undefined
-    ? { response: { statusCode: item.responseStatusCode, body: item.responseBody } }
+    ? {
+        response: {
+          statusCode: item.responseStatusCode,
+          body: item.responseBody,
+          headers: item.responseHeaders ?? {},
+        },
+      }
     : {}),
   createdAt: new Date(item.createdAt),
   expiresAt: new Date(item.expiresAt * MS_PER_SECOND),
@@ -107,7 +114,7 @@ export class DynamoDbIdempotencyRepository implements IdempotencyRecordRepositor
         TableName: this.tableName,
         Key: { idempotencyKey: scope },
         UpdateExpression:
-          'SET #status = :completed, responseStatusCode = :code, responseBody = :body',
+          'SET #status = :completed, responseStatusCode = :code, responseBody = :body, responseHeaders = :headers',
         // Never recreate a record that was released in the meantime.
         ConditionExpression: 'attribute_exists(idempotencyKey)',
         ExpressionAttributeNames: { '#status': 'status' },
@@ -115,6 +122,7 @@ export class DynamoDbIdempotencyRepository implements IdempotencyRecordRepositor
           ':completed': 'COMPLETED',
           ':code': response.statusCode,
           ':body': response.body,
+          ':headers': response.headers,
         },
       }),
     );

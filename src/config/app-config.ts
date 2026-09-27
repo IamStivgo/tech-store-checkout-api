@@ -34,6 +34,7 @@ const appConfigSchema = dynamoDbConnectionSchema.extend({
         .filter((origin) => origin.length > 0),
     ),
   TABLE_PRODUCTS: z.string().trim().min(1),
+  TABLE_CUSTOMERS: z.string().trim().min(1),
   TABLE_IDEMPOTENCY: z.string().trim().min(1),
   LOW_STOCK_THRESHOLD: z.coerce.number().int().min(0).default(DEFAULT_LOW_STOCK_THRESHOLD),
   MAX_UNITS_PER_ORDER: z.coerce.number().int().min(1).default(DEFAULT_MAX_UNITS_PER_ORDER),
@@ -62,6 +63,7 @@ export interface AppConfig extends DynamoDbConnection {
   readonly corsAllowedOrigins: readonly string[];
   readonly tables: {
     readonly products: string;
+    readonly customers: string;
     readonly idempotency: string;
   };
   readonly catalog: {
@@ -103,7 +105,11 @@ export const loadAppConfig = (env: Env): AppConfig => {
     corsAllowedOrigins: config.CORS_ALLOWED_ORIGINS,
     awsRegion: config.AWS_REGION,
     dynamodbEndpoint: config.DYNAMODB_ENDPOINT,
-    tables: { products: config.TABLE_PRODUCTS, idempotency: config.TABLE_IDEMPOTENCY },
+    tables: {
+      products: config.TABLE_PRODUCTS,
+      customers: config.TABLE_CUSTOMERS,
+      idempotency: config.TABLE_IDEMPOTENCY,
+    },
     catalog: {
       lowStockThreshold: config.LOW_STOCK_THRESHOLD,
       maxUnitsPerOrder: config.MAX_UNITS_PER_ORDER,
