@@ -1,7 +1,11 @@
-import { loadAppConfig } from './app-config';
+import { loadAppConfig, loadDynamoDbConnection } from './app-config';
 import { InvalidConfigError } from './invalid-config.error';
 
-const REQUIRED = { APP_ENV: 'local', TABLE_PRODUCTS: 'checkout-app-local-products' };
+const REQUIRED = {
+  APP_ENV: 'local',
+  TABLE_PRODUCTS: 'checkout-app-local-products',
+  TABLE_IDEMPOTENCY: 'checkout-app-local-idempotency-keys',
+};
 
 describe('loadAppConfig', () => {
   it('applies defaults when only the required variables are set', () => {
@@ -15,7 +19,10 @@ describe('loadAppConfig', () => {
       corsAllowedOrigins: [],
       awsRegion: 'us-east-1',
       dynamodbEndpoint: undefined,
-      tables: { products: 'checkout-app-local-products' },
+      tables: {
+        products: 'checkout-app-local-products',
+        idempotency: 'checkout-app-local-idempotency-keys',
+      },
       catalog: { lowStockThreshold: 3, maxUnitsPerOrder: 5 },
       pricing: { serviceFeeInCents: 300_000, freeShippingThresholdInCents: 15_000_000 },
     });
@@ -31,6 +38,7 @@ describe('loadAppConfig', () => {
       AWS_REGION: 'us-east-2',
       DYNAMODB_ENDPOINT: 'http://localhost:8000',
       TABLE_PRODUCTS: 'checkout-app-prod-products',
+      TABLE_IDEMPOTENCY: 'checkout-app-prod-idempotency-keys',
       LOW_STOCK_THRESHOLD: '2',
       MAX_UNITS_PER_ORDER: '10',
       SERVICE_FEE_IN_CENTS: '250000',
@@ -45,18 +53,24 @@ describe('loadAppConfig', () => {
       corsAllowedOrigins: ['http://localhost:5173', 'http://localhost:8080'],
       awsRegion: 'us-east-2',
       dynamodbEndpoint: 'http://localhost:8000',
-      tables: { products: 'checkout-app-prod-products' },
+      tables: {
+        products: 'checkout-app-prod-products',
+        idempotency: 'checkout-app-prod-idempotency-keys',
+      },
       catalog: { lowStockThreshold: 2, maxUnitsPerOrder: 10 },
       pricing: { serviceFeeInCents: 250_000, freeShippingThresholdInCents: 20_000_000 },
     });
   });
 
-  it.each(['APP_ENV', 'TABLE_PRODUCTS'])('fails fast when %s is missing', (variable) => {
-    const env = Object.fromEntries(Object.entries(REQUIRED).filter(([key]) => key !== variable));
+  it.each(['APP_ENV', 'TABLE_PRODUCTS', 'TABLE_IDEMPOTENCY'])(
+    'fails fast when %s is missing',
+    (variable) => {
+      const env = Object.fromEntries(Object.entries(REQUIRED).filter(([key]) => key !== variable));
 
-    expect(() => loadAppConfig(env)).toThrow(InvalidConfigError);
-    expect(() => loadAppConfig(env)).toThrow(new RegExp(variable));
-  });
+      expect(() => loadAppConfig(env)).toThrow(InvalidConfigError);
+      expect(() => loadAppConfig(env)).toThrow(new RegExp(variable));
+    },
+  );
 
   it.each([
     ['APP_ENV', { APP_ENV: 'staging' }],
@@ -74,7 +88,13 @@ describe('loadAppConfig', () => {
   it('reports every invalid variable at once', () => {
     const error = captureConfigError({ LOG_LEVEL: 'verbose', PORT: '0' });
 
-    expect(error.issues).toHaveLength(4);
+    expect(error.issues.map((issue) => issue.split(':')[0]).sort()).toEqual([
+      'APP_ENV',
+      'LOG_LEVEL',
+      'PORT',
+      'TABLE_IDEMPOTENCY',
+      'TABLE_PRODUCTS',
+    ]);
   });
 
   it('does not echo invalid values in the error message', () => {
@@ -95,3 +115,27 @@ function captureConfigError(env: Record<string, string>): InvalidConfigError {
   }
   throw new Error('Expected loadAppConfig to throw');
 }
+
+describe('loadDynamoDbConnection', () => {
+  it('needs no table names, so single-table scripts like the seed can use it', () => {
+    expect(loadDynamoDbConnection({})).toEqual({
+      awsRegion: 'us-east-1',
+      dynamodbEndpoint: undefined,
+    });
+  });
+
+  it('points at DynamoDB Local when an endpoint is set', () => {
+    expect(
+      loadDynamoDbConnection({
+        AWS_REGION: 'us-east-2',
+        DYNAMODB_ENDPOINT: 'http://localhost:8000',
+      }),
+    ).toEqual({ awsRegion: 'us-east-2', dynamodbEndpoint: 'http://localhost:8000' });
+  });
+
+  it('rejects an invalid endpoint', () => {
+    expect(() => loadDynamoDbConnection({ DYNAMODB_ENDPOINT: 'not-a-url' })).toThrow(
+      /DYNAMODB_ENDPOINT/,
+    );
+  });
+});

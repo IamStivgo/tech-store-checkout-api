@@ -5,9 +5,15 @@ import {
   INTERNAL_ERROR_CODE,
   PROBLEM_JSON_CONTENT_TYPE,
   toProblemDetails,
+  type ProblemContext,
 } from './problem-details';
 
 const UNKNOWN_TRACE_ID = 'unknown';
+
+export const problemContextOf = (request: Request): ProblemContext => ({
+  instance: request.path,
+  traceId: typeof request.id === 'string' ? request.id : UNKNOWN_TRACE_ID,
+});
 
 @Catch()
 export class ProblemDetailsFilter implements ExceptionFilter {
@@ -18,10 +24,7 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     const request = http.getRequest<Request>();
     const response = http.getResponse<Response>();
 
-    const problem = toProblemDetails(exception, {
-      instance: request.path,
-      traceId: typeof request.id === 'string' ? request.id : UNKNOWN_TRACE_ID,
-    });
+    const problem = toProblemDetails(exception, problemContextOf(request));
 
     if (problem.code === INTERNAL_ERROR_CODE) {
       this.logger.error(exception);

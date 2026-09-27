@@ -14,6 +14,7 @@ Checkout API for a tech accessories store: product catalog, delivery pricing, cu
 - Railway Oriented Programming: business errors are returned as typed `Result`/`ResultAsync` values (`src/shared/domain`). Do not `throw` for business rules; exceptions are only for unexpected failures.
 - Controllers only map DTO → command, call the use case and map the `Result` to HTTP (Problem Details, RFC 9457).
 - All money amounts are integers in cents and are always computed on the server.
+- `POST` endpoints that create resources or charge a card use `@Idempotent()` (`src/shared/infrastructure/http`): the client sends an `Idempotency-Key` UUID, 2xx and business 4xx responses are stored for 24 h and replayed with `Idempotent-Replayed: true`, and 5xx responses release the key.
 
 ## Code conventions
 
