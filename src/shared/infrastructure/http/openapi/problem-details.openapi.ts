@@ -61,6 +61,7 @@ export class ProblemDetailsSchema implements ProblemDetails {
 const PROBLEM_DESCRIPTIONS: Readonly<Partial<Record<HttpStatus, string>>> = {
   [HttpStatus.BAD_REQUEST]: 'Invalid request parameters.',
   [HttpStatus.NOT_FOUND]: 'The resource does not exist.',
+  [HttpStatus.UNPROCESSABLE_ENTITY]: 'The request breaks a business rule.',
   [HttpStatus.INTERNAL_SERVER_ERROR]: 'Unexpected error.',
 };
 

@@ -11,10 +11,8 @@ import { JsonCoverageRepository } from './json-coverage.repository';
 @Module({
   controllers: [LocationsController],
   providers: [
-    {
-      provide: COVERAGE_REPOSITORY,
-      useFactory: (): CoverageRepository => JsonCoverageRepository.fromBundledData(),
-    },
+    { provide: JsonCoverageRepository, useFactory: () => JsonCoverageRepository.fromBundledData() },
+    { provide: COVERAGE_REPOSITORY, useExisting: JsonCoverageRepository },
     {
       provide: ListDepartments,
       inject: [COVERAGE_REPOSITORY],
@@ -26,5 +24,7 @@ import { JsonCoverageRepository } from './json-coverage.repository';
       useFactory: (coverage: CoverageRepository) => new ListCities(coverage),
     },
   ],
+  // Pricing resolves delivery zones and reads the included weight of the same dataset.
+  exports: [COVERAGE_REPOSITORY, JsonCoverageRepository],
 })
 export class CoverageModule {}

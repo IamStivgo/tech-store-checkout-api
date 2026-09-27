@@ -17,6 +17,7 @@ describe('loadAppConfig', () => {
       dynamodbEndpoint: undefined,
       tables: { products: 'checkout-app-local-products' },
       catalog: { lowStockThreshold: 3, maxUnitsPerOrder: 5 },
+      pricing: { serviceFeeInCents: 300_000, freeShippingThresholdInCents: 15_000_000 },
     });
   });
 
@@ -32,6 +33,8 @@ describe('loadAppConfig', () => {
       TABLE_PRODUCTS: 'checkout-app-prod-products',
       LOW_STOCK_THRESHOLD: '2',
       MAX_UNITS_PER_ORDER: '10',
+      SERVICE_FEE_IN_CENTS: '250000',
+      FREE_SHIPPING_THRESHOLD_IN_CENTS: '20000000',
     });
 
     expect(config).toEqual({
@@ -44,6 +47,7 @@ describe('loadAppConfig', () => {
       dynamodbEndpoint: 'http://localhost:8000',
       tables: { products: 'checkout-app-prod-products' },
       catalog: { lowStockThreshold: 2, maxUnitsPerOrder: 10 },
+      pricing: { serviceFeeInCents: 250_000, freeShippingThresholdInCents: 20_000_000 },
     });
   });
 

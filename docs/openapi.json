@@ -285,6 +285,98 @@
           "Locations"
         ]
       }
+    },
+    "/api/v1/checkout/quote": {
+      "get": {
+        "description": "Informative quote computed on the server. The charged total is recalculated when the transaction is created.",
+        "operationId": "checkoutQuote",
+        "parameters": [
+          {
+            "name": "cityCode",
+            "required": true,
+            "in": "query",
+            "description": "Five-digit DIVIPOLA municipality code.",
+            "schema": {
+              "example": "05001"
+            }
+          },
+          {
+            "name": "quantity",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "example": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "productId",
+            "required": true,
+            "in": "query",
+            "description": "Product id.",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckoutQuote"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The resource does not exist.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request breaks a business rule.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Quote an order: product amount, service fee, delivery fee and total",
+        "tags": [
+          "Checkout"
+        ]
+      }
     }
   },
   "info": {
@@ -757,6 +849,137 @@
         "required": [
           "data",
           "meta"
+        ]
+      },
+      "BusinessDaysRange": {
+        "type": "object",
+        "properties": {
+          "min": {
+            "type": "number",
+            "example": 2
+          },
+          "max": {
+            "type": "number",
+            "example": 3
+          }
+        },
+        "required": [
+          "min",
+          "max"
+        ]
+      },
+      "DeliveryQuote": {
+        "type": "object",
+        "properties": {
+          "zone": {
+            "type": "string",
+            "enum": [
+              "LOCAL",
+              "METRO",
+              "NATIONAL_MAIN",
+              "NATIONAL_REGIONAL",
+              "SPECIAL_ROUTE"
+            ],
+            "example": "NATIONAL_MAIN"
+          },
+          "billableWeightKg": {
+            "type": "number",
+            "description": "Total weight rounded up to whole kilograms.",
+            "example": 4
+          },
+          "freeShippingApplied": {
+            "type": "boolean",
+            "example": false
+          },
+          "freeShippingThreshold": {
+            "description": "Product amount from which shipping is free.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              }
+            ]
+          },
+          "estimatedBusinessDays": {
+            "description": "Estimated delivery, in business days.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BusinessDaysRange"
+              }
+            ]
+          }
+        },
+        "required": [
+          "zone",
+          "billableWeightKg",
+          "freeShippingApplied",
+          "freeShippingThreshold",
+          "estimatedBusinessDays"
+        ]
+      },
+      "CheckoutQuote": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "number",
+            "example": 1
+          },
+          "unitPrice": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "productAmount": {
+            "description": "unitPrice × quantity.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              }
+            ]
+          },
+          "serviceFee": {
+            "description": "Fixed fee per order.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              }
+            ]
+          },
+          "deliveryFee": {
+            "description": "Zero when free shipping applies.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              }
+            ]
+          },
+          "total": {
+            "description": "productAmount + serviceFee + deliveryFee.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              }
+            ]
+          },
+          "delivery": {
+            "$ref": "#/components/schemas/DeliveryQuote"
+          },
+          "calculatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "productId",
+          "quantity",
+          "unitPrice",
+          "productAmount",
+          "serviceFee",
+          "deliveryFee",
+          "total",
+          "delivery",
+          "calculatedAt"
         ]
       }
     }
