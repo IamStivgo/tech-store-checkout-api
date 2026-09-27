@@ -21,10 +21,11 @@
     "typecheck": "tsc --noEmit",
     "db:create-tables": "node --env-file-if-exists=.env -r ts-node/register/transpile-only scripts/create-local-tables.ts",
     "seed": "node --env-file-if-exists=.env -r ts-node/register/transpile-only scripts/seed.ts",
+    "build:api-docs": "node -r ts-node/register/transpile-only scripts/build-api-docs.ts",
     "openapi:export": "node -r ts-node/register/transpile-only scripts/export-openapi.ts",
     "coverage:build": "node -r ts-node/register/transpile-only scripts/build-coverage-data.ts && prettier --write src/modules/coverage/infrastructure/coverage-data.json",
     "test": "jest --coverage",
-    "test:bundle": "node --test test/bundle/lambda-bundle.test.mjs",
+    "test:artifacts": "node --test \"test/bundle/*.test.mjs\"",
     "prepare": "husky"
   },
   "dependencies": {

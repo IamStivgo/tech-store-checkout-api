@@ -47,7 +47,8 @@ npm run lint
 npm run lint:deps               # hexagonal rules (dependency-cruiser)
 npm run format:check
 npm run package:lambda          # webpack bundle → dist-lambda/{lambda,reconcile}.js + dist-lambda.zip
-npm run test:bundle             # smoke test of the real bundle (node:test)
+npm run build:api-docs          # static Swagger UI → dist-api-docs/ (published under /api-docs/)
+npm run test:artifacts          # smoke tests of dist-lambda/ and dist-api-docs/ (node:test)
 npm run openapi:export          # regenerate docs/openapi.json after any API change
 ```
 
@@ -60,7 +61,7 @@ npm run openapi:export          # regenerate docs/openapi.json after any API cha
 ## Lambda bundle
 
 - `webpack.lambda.config.mjs` bundles `src/lambda.ts` and `src/reconcile.handler.ts` into self-contained `lambda.js` and `reconcile.js` at the zip root. The infrastructure configures the handlers `lambda.handler` and `reconcile.handler`: keep the file names and the `handler` exports.
-- Do not add lazily-required Nest integrations or packages that load files at runtime without checking `npm run test:bundle`. New webpack warnings are errors to investigate, not noise: only the known optional requires are ignored.
+- Do not add lazily-required Nest integrations or packages that load files at runtime without checking `npm run test:artifacts`. New webpack warnings are errors to investigate, not noise: only the known optional requires are ignored.
 - The bundle is not minified on purpose (readable class names in logs). Cold start measured at ~0.4 s `Init Duration`.
 
 ## Git workflow

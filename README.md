@@ -63,7 +63,8 @@ npm run start:dev               # http://localhost:3000/api/v1/products
 | `npm run format:check`          | Verifica el formato con Prettier                                                                                                                |
 | `npm run format`                | Aplica el formato con Prettier                                                                                                                  |
 | `npm run package:lambda`        | Bundle de webpack para Lambda: `dist-lambda/lambda.js` y `reconcile.js` (autocontenidos) y `dist-lambda.zip`                                    |
-| `npm run test:bundle`           | Prueba de humo del bundle real: health, datos empaquetados, Problem Details y conciliación                                                      |
+| `npm run build:api-docs`        | Genera Swagger UI estático en `dist-api-docs/` (se publica en `/api-docs/`)                                                                     |
+| `npm run test:artifacts`        | Pruebas de humo del bundle de Lambda y del sitio de documentación ya generados                                                                  |
 | `npm run openapi:export`        | Regenera el contrato `docs/openapi.json` desde los controladores (una prueba falla si quedó desactualizado)                                     |
 
 `docker compose down -v` detiene DynamoDB Local y borra sus datos.

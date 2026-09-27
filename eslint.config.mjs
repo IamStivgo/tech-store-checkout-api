@@ -7,7 +7,7 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['dist/', 'dist-lambda/', 'coverage/'],
+    ignores: ['dist/', 'dist-lambda/', 'dist-api-docs/', 'coverage/'],
   },
   eslint.configs.recommended,
   tseslint.configs.strictTypeChecked,
