@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-import { ValidationError } from '../../../../shared/domain/validation-error';
 import { DomainHttpException } from '../../../../shared/infrastructure/http/domain-http.exception';
+import { toValidationError } from '../../../../shared/infrastructure/http/zod-validation-error';
 import type { QuoteCheckoutCommand } from '../../application/quote-checkout.use-case';
 
 const quoteQuerySchema = z.object({
@@ -17,14 +17,7 @@ const quoteQuerySchema = z.object({
 export const parseQuoteQuery = (query: Readonly<Record<string, unknown>>): QuoteCheckoutCommand => {
   const parsed = quoteQuerySchema.safeParse(query);
   if (!parsed.success) {
-    throw new DomainHttpException(
-      new ValidationError(
-        parsed.error.issues.map((issue) => ({
-          field: issue.path.join('.'),
-          message: issue.message,
-        })),
-      ),
-    );
+    throw new DomainHttpException(toValidationError(parsed.error));
   }
   return parsed.data;
 };

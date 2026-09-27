@@ -4,6 +4,7 @@ import { InvalidConfigError } from './invalid-config.error';
 const REQUIRED = {
   APP_ENV: 'local',
   TABLE_PRODUCTS: 'checkout-app-local-products',
+  TABLE_CUSTOMERS: 'checkout-app-local-customers',
   TABLE_IDEMPOTENCY: 'checkout-app-local-idempotency-keys',
 };
 
@@ -21,6 +22,7 @@ describe('loadAppConfig', () => {
       dynamodbEndpoint: undefined,
       tables: {
         products: 'checkout-app-local-products',
+        customers: 'checkout-app-local-customers',
         idempotency: 'checkout-app-local-idempotency-keys',
       },
       catalog: { lowStockThreshold: 3, maxUnitsPerOrder: 5 },
@@ -38,6 +40,7 @@ describe('loadAppConfig', () => {
       AWS_REGION: 'us-east-2',
       DYNAMODB_ENDPOINT: 'http://localhost:8000',
       TABLE_PRODUCTS: 'checkout-app-prod-products',
+      TABLE_CUSTOMERS: 'checkout-app-prod-customers',
       TABLE_IDEMPOTENCY: 'checkout-app-prod-idempotency-keys',
       LOW_STOCK_THRESHOLD: '2',
       MAX_UNITS_PER_ORDER: '10',
@@ -55,6 +58,7 @@ describe('loadAppConfig', () => {
       dynamodbEndpoint: 'http://localhost:8000',
       tables: {
         products: 'checkout-app-prod-products',
+        customers: 'checkout-app-prod-customers',
         idempotency: 'checkout-app-prod-idempotency-keys',
       },
       catalog: { lowStockThreshold: 2, maxUnitsPerOrder: 10 },
@@ -62,7 +66,7 @@ describe('loadAppConfig', () => {
     });
   });
 
-  it.each(['APP_ENV', 'TABLE_PRODUCTS', 'TABLE_IDEMPOTENCY'])(
+  it.each(['APP_ENV', 'TABLE_PRODUCTS', 'TABLE_CUSTOMERS', 'TABLE_IDEMPOTENCY'])(
     'fails fast when %s is missing',
     (variable) => {
       const env = Object.fromEntries(Object.entries(REQUIRED).filter(([key]) => key !== variable));
@@ -92,6 +96,7 @@ describe('loadAppConfig', () => {
       'APP_ENV',
       'LOG_LEVEL',
       'PORT',
+      'TABLE_CUSTOMERS',
       'TABLE_IDEMPOTENCY',
       'TABLE_PRODUCTS',
     ]);
