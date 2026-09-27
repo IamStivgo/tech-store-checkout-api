@@ -41,5 +41,6 @@ import { PRODUCT_REPOSITORY } from './product-repository.token';
         new GetProductStock(products, config.catalog),
     },
   ],
+  exports: [PRODUCT_REPOSITORY],
 })
 export class ProductsModule {}

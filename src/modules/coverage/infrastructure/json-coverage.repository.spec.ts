@@ -7,6 +7,10 @@ import { InvalidCoverageDataError, JsonCoverageRepository } from './json-coverag
 describe('JsonCoverageRepository', () => {
   const repository = JsonCoverageRepository.fromBundledData();
 
+  it('exposes the weight included in every zone base rate (3 kg)', () => {
+    expect(repository.includedWeightKg).toBe(3);
+  });
+
   const zoneOf = (cityCode: string) => unwrap(repository.findCity(cityCode)).zone.code;
 
   describe('findCity', () => {

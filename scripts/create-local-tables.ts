@@ -1,7 +1,9 @@
 import { loadAppConfig } from '../src/config/app-config';
+import { customersTableDefinition } from '../src/modules/customers/infrastructure/persistence/customers-table.definition';
 import { productsTableDefinition } from '../src/modules/products/infrastructure/persistence/products-table.definition';
 import { createTables } from '../src/shared/infrastructure/persistence/create-tables';
 import { createDynamoDbClient } from '../src/shared/infrastructure/persistence/dynamodb-client.factory';
+import { idempotencyKeysTableDefinition } from '../src/shared/infrastructure/persistence/idempotency-keys-table.definition';
 
 const main = async (): Promise<void> => {
   const config = loadAppConfig(process.env);
@@ -14,6 +16,8 @@ const main = async (): Promise<void> => {
 
   const outcomes = await createTables(createDynamoDbClient(config), [
     productsTableDefinition(config.tables.products),
+    customersTableDefinition(config.tables.customers),
+    idempotencyKeysTableDefinition(config.tables.idempotency),
   ]);
 
   for (const [table, outcome] of outcomes) {

@@ -16,6 +16,8 @@ Object.assign(process.env, {
   APP_VERSION: '9.9.9-bundle',
   LOG_LEVEL: 'silent',
   TABLE_PRODUCTS: 'checkout-app-test-products',
+  TABLE_CUSTOMERS: 'checkout-app-test-customers',
+  TABLE_IDEMPOTENCY: 'checkout-app-test-idempotency-keys',
 });
 
 const gatewayEvent = (method, rawPath) => ({

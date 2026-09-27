@@ -14,6 +14,7 @@ import coverageData from './coverage-data.json';
 const zoneCodeSchema = z.enum(ZONE_CODES);
 
 const coverageDataSchema = z.object({
+  includedWeightKg: z.number().int().min(0),
   zones: z.array(
     z.object({
       code: zoneCodeSchema,
@@ -82,6 +83,8 @@ export class JsonCoverageRepository implements CoverageRepository {
   private readonly departments: Department[];
   private readonly citiesByDepartment = new Map<string, City[]>();
   private readonly citiesByCode = new Map<string, City>();
+  /** Weight covered by every zone's base rate (BR-04), versioned with the zone table. */
+  readonly includedWeightKg: number;
 
   constructor(data: unknown) {
     const parsed = coverageDataSchema.safeParse(data);
@@ -89,6 +92,7 @@ export class JsonCoverageRepository implements CoverageRepository {
       throw new InvalidCoverageDataError(parsed.error.message);
     }
 
+    this.includedWeightKg = parsed.data.includedWeightKg;
     const zones = new Map(parsed.data.zones.map((zone) => [zone.code, toDeliveryZone(zone)]));
     const rules: ZoneRules = {
       cityOverrides: new Map(Object.entries(parsed.data.cityZoneOverrides)),

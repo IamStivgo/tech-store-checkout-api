@@ -285,12 +285,249 @@
           "Locations"
         ]
       }
+    },
+    "/api/v1/checkout/quote": {
+      "get": {
+        "description": "Informative quote computed on the server. The charged total is recalculated when the transaction is created.",
+        "operationId": "checkoutQuote",
+        "parameters": [
+          {
+            "name": "cityCode",
+            "required": true,
+            "in": "query",
+            "description": "Five-digit DIVIPOLA municipality code.",
+            "schema": {
+              "example": "05001"
+            }
+          },
+          {
+            "name": "quantity",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "example": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "productId",
+            "required": true,
+            "in": "query",
+            "description": "Product id.",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckoutQuote"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The resource does not exist.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request breaks a business rule.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Quote an order: product amount, service fee, delivery fee and total",
+        "tags": [
+          "Checkout"
+        ]
+      }
+    },
+    "/api/v1/customers": {
+      "post": {
+        "description": "Always creates a new customer (there is no lookup by email). The response masks the personal data.",
+        "operationId": "customersCreate",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Client-generated UUID. Repeating it with the same body returns the stored response with `Idempotent-Replayed: true`; with another body, 409 IDEMPOTENCY_KEY_CONFLICT.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCustomerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "headers": {
+              "Location": {
+                "description": "URL of the new customer.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters.\n\nInvalid request parameters.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with the current state or a previous request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Create the customer of a checkout",
+        "tags": [
+          "Customers"
+        ]
+      }
+    },
+    "/api/v1/customers/{customerId}": {
+      "get": {
+        "operationId": "customersDetail",
+        "parameters": [
+          {
+            "name": "customerId",
+            "required": true,
+            "in": "path",
+            "description": "Customer id.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The resource does not exist.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get a customer with its personal data masked",
+        "tags": [
+          "Customers"
+        ]
+      }
     }
   },
   "info": {
     "title": "Tech Store Checkout API",
     "description": "Catalog, delivery coverage and checkout of a tech accessories store. Errors follow RFC 9457 Problem Details.",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "contact": {}
   },
   "tags": [],
@@ -757,6 +994,230 @@
         "required": [
           "data",
           "meta"
+        ]
+      },
+      "BusinessDaysRange": {
+        "type": "object",
+        "properties": {
+          "min": {
+            "type": "number",
+            "example": 2
+          },
+          "max": {
+            "type": "number",
+            "example": 3
+          }
+        },
+        "required": [
+          "min",
+          "max"
+        ]
+      },
+      "DeliveryQuote": {
+        "type": "object",
+        "properties": {
+          "zone": {
+            "type": "string",
+            "enum": [
+              "LOCAL",
+              "METRO",
+              "NATIONAL_MAIN",
+              "NATIONAL_REGIONAL",
+              "SPECIAL_ROUTE"
+            ],
+            "example": "NATIONAL_MAIN"
+          },
+          "billableWeightKg": {
+            "type": "number",
+            "description": "Total weight rounded up to whole kilograms.",
+            "example": 4
+          },
+          "freeShippingApplied": {
+            "type": "boolean",
+            "example": false
+          },
+          "freeShippingThreshold": {
+            "description": "Product amount from which shipping is free.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              }
+            ]
+          },
+          "estimatedBusinessDays": {
+            "description": "Estimated delivery, in business days.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BusinessDaysRange"
+              }
+            ]
+          }
+        },
+        "required": [
+          "zone",
+          "billableWeightKg",
+          "freeShippingApplied",
+          "freeShippingThreshold",
+          "estimatedBusinessDays"
+        ]
+      },
+      "CheckoutQuote": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "number",
+            "example": 1
+          },
+          "unitPrice": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "productAmount": {
+            "description": "unitPrice × quantity.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              }
+            ]
+          },
+          "serviceFee": {
+            "description": "Fixed fee per order.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              }
+            ]
+          },
+          "deliveryFee": {
+            "description": "Zero when free shipping applies.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              }
+            ]
+          },
+          "total": {
+            "description": "productAmount + serviceFee + deliveryFee.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              }
+            ]
+          },
+          "delivery": {
+            "$ref": "#/components/schemas/DeliveryQuote"
+          },
+          "calculatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "productId",
+          "quantity",
+          "unitPrice",
+          "productAmount",
+          "serviceFee",
+          "deliveryFee",
+          "total",
+          "delivery",
+          "calculatedAt"
+        ]
+      },
+      "CreateCustomerRequest": {
+        "type": "object",
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "description": "3 to 80 characters: letters (accents and ñ included), spaces, apostrophes, hyphens and dots; at least two words.",
+            "example": "Ana María Gómez"
+          },
+          "email": {
+            "type": "string",
+            "description": "Up to 254 characters; stored in lower case.",
+            "example": "ana.gomez@example.com"
+          },
+          "phone": {
+            "type": "string",
+            "description": "10 digits starting with 3 (mobile) or 60 (landline); +57, spaces and hyphens are accepted.",
+            "example": "3001234567"
+          },
+          "legalIdType": {
+            "type": "string",
+            "enum": [
+              "CC",
+              "CE",
+              "NIT",
+              "PP"
+            ],
+            "example": "CC"
+          },
+          "legalId": {
+            "type": "string",
+            "description": "CC: 5-10 digits; CE: 6-10 letters or digits; NIT: 9 digits and an optional check digit; PP: 6-12 letters or digits.",
+            "example": "1020304050"
+          }
+        },
+        "required": [
+          "fullName",
+          "email",
+          "phone",
+          "legalIdType",
+          "legalId"
+        ]
+      },
+      "Customer": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "2f9d4c1a-7b3e-4d5f-8a6b-9c0d1e2f3a4b"
+          },
+          "fullName": {
+            "type": "string",
+            "example": "Ana M. G."
+          },
+          "email": {
+            "type": "string",
+            "example": "a***@example.com"
+          },
+          "phone": {
+            "type": "string",
+            "example": "******4567"
+          },
+          "legalIdType": {
+            "type": "string",
+            "enum": [
+              "CC",
+              "CE",
+              "NIT",
+              "PP"
+            ],
+            "example": "CC"
+          },
+          "legalId": {
+            "type": "string",
+            "example": "******4050"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-09-24T20:15:00.000Z"
+          }
+        },
+        "description": "Customer with its personal data masked.",
+        "required": [
+          "id",
+          "fullName",
+          "email",
+          "phone",
+          "legalIdType",
+          "legalId",
+          "createdAt"
         ]
       }
     }
