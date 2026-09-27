@@ -1,12 +1,18 @@
 // Bundles each Lambda handler into a single self-contained file at the root of dist-lambda/:
 // lambda.js (API Gateway) and reconcile.js (scheduler). The infrastructure creates the functions
 // with the handlers lambda.handler and reconcile.handler, so these names are a contract.
+import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
 import webpack from 'webpack';
 
 const require = createRequire(import.meta.url);
+
+// Terraform owns the Lambda environment, so the version travels inside the bundle. The deploy
+// workflow passes APP_VERSION with the commit; an APP_VERSION set on the function still wins.
+const { version } = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
+const APP_VERSION = process.env.APP_VERSION ?? version;
 
 // Optional integrations that Nest and its libraries require lazily; bundling them would fail
 // because they are not installed, and ignoring them is safe because they are never used.
@@ -66,6 +72,11 @@ export default {
     minimize: false,
   },
   plugins: [
+    new webpack.BannerPlugin({
+      banner: `process.env.APP_VERSION ??= ${JSON.stringify(APP_VERSION)};`,
+      raw: true,
+      entryOnly: true,
+    }),
     new webpack.IgnorePlugin({
       checkResource: (request) => LAZY_IMPORTS.has(request) && isNotInstalled(request),
     }),
