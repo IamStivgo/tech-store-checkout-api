@@ -1,0 +1,764 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "operationId": "healthCheck",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Liveness check with the deployed version",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/v1/products": {
+      "get": {
+        "operationId": "productsList",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductList"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "summary": "List the active catalog in display order",
+        "tags": [
+          "Products"
+        ]
+      }
+    },
+    "/api/v1/products/{productId}": {
+      "get": {
+        "operationId": "productsDetail",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "description": "Product id.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The resource does not exist.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get a product with its images, stock and order limit",
+        "tags": [
+          "Products"
+        ]
+      }
+    },
+    "/api/v1/products/{productId}/stock": {
+      "get": {
+        "operationId": "productsStock",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "description": "Product id.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductStock"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The resource does not exist.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get the current stock of a product (never cached)",
+        "tags": [
+          "Products"
+        ]
+      }
+    },
+    "/api/v1/locations/departments": {
+      "get": {
+        "operationId": "locationsDepartments",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepartmentList"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "summary": "List the Colombian departments (DIVIPOLA) sorted by name",
+        "tags": [
+          "Locations"
+        ]
+      }
+    },
+    "/api/v1/locations/departments/{departmentCode}/cities": {
+      "get": {
+        "operationId": "locationsCities",
+        "parameters": [
+          {
+            "name": "departmentCode",
+            "required": true,
+            "in": "path",
+            "description": "Two-digit DIVIPOLA code.",
+            "schema": {
+              "example": "05",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CityList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The resource does not exist.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "summary": "List the municipalities of a department with their delivery zone",
+        "tags": [
+          "Locations"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Tech Store Checkout API",
+    "description": "Catalog, delivery coverage and checkout of a tech accessories store. Errors follow RFC 9457 Problem Details.",
+    "version": "0.0.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [
+    {
+      "url": "/",
+      "description": "Same origin (CloudFront routes /api/* to the API)"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "FieldError": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string",
+            "example": "productId"
+          },
+          "message": {
+            "type": "string",
+            "example": "Must be a valid UUID."
+          }
+        },
+        "required": [
+          "field",
+          "message"
+        ]
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "example": "/problems/product-not-found"
+          },
+          "title": {
+            "type": "string",
+            "example": "Not Found"
+          },
+          "status": {
+            "type": "number",
+            "example": 404
+          },
+          "detail": {
+            "type": "string",
+            "example": "The product does not exist."
+          },
+          "instance": {
+            "type": "string",
+            "example": "/api/v1/products/7d094266-0b4e-4789-9522-96e1cd7ffa61"
+          },
+          "code": {
+            "type": "string",
+            "description": "Stable, machine-readable error code.",
+            "example": "PRODUCT_NOT_FOUND"
+          },
+          "traceId": {
+            "type": "string",
+            "description": "Request id, also returned in the X-Request-Id header."
+          },
+          "context": {
+            "type": "object",
+            "description": "Extra data about the error.",
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            }
+          },
+          "errors": {
+            "description": "Invalid fields (400 only).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FieldError"
+            }
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "detail",
+          "instance",
+          "code",
+          "traceId"
+        ]
+      },
+      "Health": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          },
+          "version": {
+            "type": "string",
+            "description": "Deployed application version.",
+            "example": "0.1.0"
+          },
+          "time": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-09-27T15:00:00.000Z"
+          }
+        },
+        "required": [
+          "status",
+          "version",
+          "time"
+        ]
+      },
+      "Money": {
+        "type": "object",
+        "properties": {
+          "amountInCents": {
+            "type": "number",
+            "description": "Amount in cents (integer).",
+            "example": 3990000
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "COP"
+            ],
+            "example": "COP"
+          }
+        },
+        "required": [
+          "amountInCents",
+          "currency"
+        ]
+      },
+      "Stock": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "number",
+            "description": "Units that can be bought now.",
+            "example": 12
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "IN_STOCK",
+              "LOW_STOCK",
+              "OUT_OF_STOCK"
+            ],
+            "example": "IN_STOCK"
+          }
+        },
+        "required": [
+          "available",
+          "status"
+        ]
+      },
+      "ImageSource": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "example": "image/avif"
+          },
+          "srcSet": {
+            "type": "string",
+            "example": "/images/products/tec-cbl-usbc-320.avif 320w, /images/products/tec-cbl-usbc-640.avif 640w, /images/products/tec-cbl-usbc-960.avif 960w"
+          }
+        },
+        "required": [
+          "type",
+          "srcSet"
+        ]
+      },
+      "Image": {
+        "type": "object",
+        "properties": {
+          "alt": {
+            "type": "string",
+            "example": "Cable USB-C trenzado gris enrollado"
+          },
+          "width": {
+            "type": "number",
+            "example": 640
+          },
+          "height": {
+            "type": "number",
+            "example": 640
+          },
+          "src": {
+            "type": "string",
+            "description": "JPEG fallback, 640 px wide.",
+            "example": "/images/products/tec-cbl-usbc-640.jpg"
+          },
+          "sources": {
+            "description": "Modern formats for <picture>.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImageSource"
+            }
+          }
+        },
+        "required": [
+          "alt",
+          "width",
+          "height",
+          "src",
+          "sources"
+        ]
+      },
+      "ProductSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "7d094266-0b4e-4789-9522-96e1cd7ffa60"
+          },
+          "sku": {
+            "type": "string",
+            "example": "TEC-CBL-USBC"
+          },
+          "name": {
+            "type": "string",
+            "example": "Cable USB-C a USB-C 2 m (100 W)"
+          },
+          "shortDescription": {
+            "type": "string",
+            "example": "Carga rápida de hasta 100 W y transferencia de datos USB 2.0."
+          },
+          "price": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "stock": {
+            "$ref": "#/components/schemas/Stock"
+          },
+          "image": {
+            "$ref": "#/components/schemas/Image"
+          }
+        },
+        "required": [
+          "id",
+          "sku",
+          "name",
+          "shortDescription",
+          "price",
+          "stock",
+          "image"
+        ]
+      },
+      "ListMeta": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "number",
+            "example": 10
+          }
+        },
+        "required": [
+          "count"
+        ]
+      },
+      "ProductList": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductSummary"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ListMeta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "ProductDetail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "7d094266-0b4e-4789-9522-96e1cd7ffa60"
+          },
+          "sku": {
+            "type": "string",
+            "example": "TEC-CBL-USBC"
+          },
+          "name": {
+            "type": "string",
+            "example": "Cable USB-C a USB-C 2 m (100 W)"
+          },
+          "shortDescription": {
+            "type": "string",
+            "example": "Carga rápida de hasta 100 W y transferencia de datos USB 2.0."
+          },
+          "price": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "stock": {
+            "$ref": "#/components/schemas/Stock"
+          },
+          "image": {
+            "$ref": "#/components/schemas/Image"
+          },
+          "description": {
+            "type": "string"
+          },
+          "weightGrams": {
+            "type": "number",
+            "description": "Shipping weight.",
+            "example": 150
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Image"
+            }
+          },
+          "maxUnitsPerOrder": {
+            "type": "number",
+            "description": "min(available stock, units allowed per order).",
+            "example": 5
+          }
+        },
+        "required": [
+          "id",
+          "sku",
+          "name",
+          "shortDescription",
+          "price",
+          "stock",
+          "image",
+          "description",
+          "weightGrams",
+          "images",
+          "maxUnitsPerOrder"
+        ]
+      },
+      "ProductStock": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "number",
+            "description": "Units that can be bought now.",
+            "example": 12
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "IN_STOCK",
+              "LOW_STOCK",
+              "OUT_OF_STOCK"
+            ],
+            "example": "IN_STOCK"
+          },
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "available",
+          "status",
+          "productId",
+          "updatedAt"
+        ]
+      },
+      "Department": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Two-digit DIVIPOLA department code.",
+            "example": "05"
+          },
+          "name": {
+            "type": "string",
+            "example": "Antioquia"
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ]
+      },
+      "DepartmentList": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Department"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ListMeta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "City": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Five-digit DIVIPOLA municipality code.",
+            "example": "05001"
+          },
+          "name": {
+            "type": "string",
+            "example": "Medellín"
+          },
+          "zone": {
+            "type": "string",
+            "enum": [
+              "LOCAL",
+              "METRO",
+              "NATIONAL_MAIN",
+              "NATIONAL_REGIONAL",
+              "SPECIAL_ROUTE"
+            ],
+            "description": "Delivery zone used to price shipping."
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "zone"
+        ]
+      },
+      "CityList": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/City"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ListMeta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      }
+    }
+  }
+}
