@@ -522,6 +522,59 @@
           "Customers"
         ]
       }
+    },
+    "/api/v1/payments/acceptance-tokens": {
+      "get": {
+        "description": "Each token can be used in one payment only: request new ones for every payment attempt.",
+        "operationId": "paymentsAcceptanceTokens",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcceptanceTokens"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The payment provider is not available.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "The payment provider did not answer in time.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get the documents the buyer must accept, with fresh single-use tokens",
+        "tags": [
+          "Payments"
+        ]
+      }
     }
   },
   "info": {
@@ -1218,6 +1271,49 @@
           "legalIdType",
           "legalId",
           "createdAt"
+        ]
+      },
+      "AcceptanceToken": {
+        "type": "object",
+        "properties": {
+          "acceptanceToken": {
+            "type": "string",
+            "description": "Signed, single-use token to send with the payment."
+          },
+          "permalink": {
+            "type": "string",
+            "format": "uri",
+            "description": "Document the buyer accepts (PDF)."
+          }
+        },
+        "required": [
+          "acceptanceToken",
+          "permalink"
+        ]
+      },
+      "AcceptanceTokens": {
+        "type": "object",
+        "properties": {
+          "endUserPolicy": {
+            "description": "Terms and privacy policy.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AcceptanceToken"
+              }
+            ]
+          },
+          "personalDataAuth": {
+            "description": "Personal data processing.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AcceptanceToken"
+              }
+            ]
+          }
+        },
+        "required": [
+          "endUserPolicy",
+          "personalDataAuth"
         ]
       }
     }

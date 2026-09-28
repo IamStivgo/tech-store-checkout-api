@@ -27,6 +27,7 @@ describe('loadAppConfig', () => {
       },
       catalog: { lowStockThreshold: 3, maxUnitsPerOrder: 5 },
       pricing: { serviceFeeInCents: 300_000, freeShippingThresholdInCents: 15_000_000 },
+      payments: { provider: 'fake' },
     });
   });
 
@@ -46,6 +47,12 @@ describe('loadAppConfig', () => {
       MAX_UNITS_PER_ORDER: '10',
       SERVICE_FEE_IN_CENTS: '250000',
       FREE_SHIPPING_THRESHOLD_IN_CENTS: '20000000',
+      PAYMENT_PROVIDER: 'http',
+      PAYMENT_API_BASE_URL: 'https://provider.test/v1',
+      PAYMENT_PUBLIC_KEY: 'pub_test_key',
+      PAYMENT_PRIVATE_KEY_PARAM: '/checkout-app/prod/payment/private-key',
+      PAYMENT_INTEGRITY_SECRET_PARAM: '/checkout-app/prod/payment/integrity-secret',
+      PAYMENT_HTTP_TIMEOUT_MS: '4000',
     });
 
     expect(config).toEqual({
@@ -63,7 +70,49 @@ describe('loadAppConfig', () => {
       },
       catalog: { lowStockThreshold: 2, maxUnitsPerOrder: 10 },
       pricing: { serviceFeeInCents: 250_000, freeShippingThresholdInCents: 20_000_000 },
+      payments: {
+        provider: 'http',
+        apiBaseUrl: 'https://provider.test/v1',
+        publicKey: 'pub_test_key',
+        privateKey: { parameterName: '/checkout-app/prod/payment/private-key' },
+        integritySecret: { parameterName: '/checkout-app/prod/payment/integrity-secret' },
+        timeoutMs: 4000,
+      },
     });
+  });
+
+  it('takes local secret values when there are no SSM parameters', () => {
+    const config = loadAppConfig({
+      ...REQUIRED,
+      PAYMENT_PROVIDER: 'http',
+      PAYMENT_API_BASE_URL: 'https://provider.test/v1',
+      PAYMENT_PUBLIC_KEY: 'pub_test_key',
+      PAYMENT_PRIVATE_KEY: 'prv_test_key',
+      PAYMENT_INTEGRITY_SECRET: 'integrity_secret_for_tests',
+    });
+
+    expect(config.payments).toMatchObject({
+      privateKey: { value: 'prv_test_key' },
+      integritySecret: { value: 'integrity_secret_for_tests' },
+      timeoutMs: 5000,
+    });
+  });
+
+  it('never runs the fake payment provider in prod', () => {
+    expect(() => loadAppConfig({ ...REQUIRED, APP_ENV: 'prod' })).toThrow(
+      /PAYMENT_PROVIDER: the fake payment provider is not allowed in prod/,
+    );
+  });
+
+  it('lists everything the HTTP payment provider is missing', () => {
+    const error = captureConfigError({ ...REQUIRED, PAYMENT_PROVIDER: 'http' });
+
+    expect(error.issues).toEqual([
+      'PAYMENT_API_BASE_URL: required by the http payment provider',
+      'PAYMENT_PUBLIC_KEY: required by the http payment provider',
+      'PAYMENT_PRIVATE_KEY_PARAM: set it or PAYMENT_PRIVATE_KEY',
+      'PAYMENT_INTEGRITY_SECRET_PARAM: set it or PAYMENT_INTEGRITY_SECRET',
+    ]);
   });
 
   it.each(['APP_ENV', 'TABLE_PRODUCTS', 'TABLE_CUSTOMERS', 'TABLE_IDEMPOTENCY'])(

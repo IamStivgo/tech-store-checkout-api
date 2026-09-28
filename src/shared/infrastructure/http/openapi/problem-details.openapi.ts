@@ -64,6 +64,8 @@ const PROBLEM_DESCRIPTIONS: Readonly<Partial<Record<HttpStatus, string>>> = {
   [HttpStatus.CONFLICT]: 'The request conflicts with the current state or a previous request.',
   [HttpStatus.UNPROCESSABLE_ENTITY]: 'The request breaks a business rule.',
   [HttpStatus.INTERNAL_SERVER_ERROR]: 'Unexpected error.',
+  [HttpStatus.BAD_GATEWAY]: 'The payment provider is not available.',
+  [HttpStatus.GATEWAY_TIMEOUT]: 'The payment provider did not answer in time.',
 };
 
 /** Documents error responses as RFC 9457 Problem Details (`application/problem+json`). */

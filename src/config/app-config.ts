@@ -12,6 +12,8 @@ const DEFAULT_MAX_UNITS_PER_ORDER = 5;
 // Business rules §7: COP 3.000 service fee and free shipping from COP 150.000, in cents.
 const DEFAULT_SERVICE_FEE_IN_CENTS = 300_000;
 const DEFAULT_FREE_SHIPPING_THRESHOLD_IN_CENTS = 15_000_000;
+const PAYMENT_PROVIDERS = ['http', 'fake'] as const;
+const DEFAULT_PAYMENT_TIMEOUT_MS = 5000;
 
 // Connection settings shared by the app and the scripts that only touch one table (seed).
 const dynamoDbConnectionSchema = z.object({
@@ -19,32 +21,66 @@ const dynamoDbConnectionSchema = z.object({
   DYNAMODB_ENDPOINT: z.url().optional(),
 });
 
-const appConfigSchema = dynamoDbConnectionSchema.extend({
-  APP_ENV: z.enum(APP_ENVS),
-  APP_VERSION: z.string().trim().min(1).default('0.0.0-local'),
-  LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
-  PORT: z.coerce.number().int().min(1).max(MAX_PORT).default(DEFAULT_PORT),
-  CORS_ALLOWED_ORIGINS: z
-    .string()
-    .default('')
-    .transform((origins) =>
-      origins
-        .split(',')
-        .map((origin) => origin.trim())
-        .filter((origin) => origin.length > 0),
-    ),
-  TABLE_PRODUCTS: z.string().trim().min(1),
-  TABLE_CUSTOMERS: z.string().trim().min(1),
-  TABLE_IDEMPOTENCY: z.string().trim().min(1),
-  LOW_STOCK_THRESHOLD: z.coerce.number().int().min(0).default(DEFAULT_LOW_STOCK_THRESHOLD),
-  MAX_UNITS_PER_ORDER: z.coerce.number().int().min(1).default(DEFAULT_MAX_UNITS_PER_ORDER),
-  SERVICE_FEE_IN_CENTS: z.coerce.number().int().min(0).default(DEFAULT_SERVICE_FEE_IN_CENTS),
-  FREE_SHIPPING_THRESHOLD_IN_CENTS: z.coerce
-    .number()
-    .int()
-    .min(0)
-    .default(DEFAULT_FREE_SHIPPING_THRESHOLD_IN_CENTS),
-});
+const appConfigSchema = dynamoDbConnectionSchema
+  .extend({
+    APP_ENV: z.enum(APP_ENVS),
+    APP_VERSION: z.string().trim().min(1).default('0.0.0-local'),
+    LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
+    PORT: z.coerce.number().int().min(1).max(MAX_PORT).default(DEFAULT_PORT),
+    CORS_ALLOWED_ORIGINS: z
+      .string()
+      .default('')
+      .transform((origins) =>
+        origins
+          .split(',')
+          .map((origin) => origin.trim())
+          .filter((origin) => origin.length > 0),
+      ),
+    TABLE_PRODUCTS: z.string().trim().min(1),
+    TABLE_CUSTOMERS: z.string().trim().min(1),
+    TABLE_IDEMPOTENCY: z.string().trim().min(1),
+    LOW_STOCK_THRESHOLD: z.coerce.number().int().min(0).default(DEFAULT_LOW_STOCK_THRESHOLD),
+    MAX_UNITS_PER_ORDER: z.coerce.number().int().min(1).default(DEFAULT_MAX_UNITS_PER_ORDER),
+    SERVICE_FEE_IN_CENTS: z.coerce.number().int().min(0).default(DEFAULT_SERVICE_FEE_IN_CENTS),
+    FREE_SHIPPING_THRESHOLD_IN_CENTS: z.coerce
+      .number()
+      .int()
+      .min(0)
+      .default(DEFAULT_FREE_SHIPPING_THRESHOLD_IN_CENTS),
+    // `fake` decides the payment result from the card token (local, tests and Docker only).
+    PAYMENT_PROVIDER: z.enum(PAYMENT_PROVIDERS).default('fake'),
+    PAYMENT_API_BASE_URL: z.url().optional(),
+    PAYMENT_PUBLIC_KEY: z.string().trim().min(1).optional(),
+    // Each secret comes from an SSM SecureString (…_PARAM, in AWS) or, locally, from its value.
+    PAYMENT_PRIVATE_KEY_PARAM: z.string().trim().min(1).optional(),
+    PAYMENT_PRIVATE_KEY: z.string().trim().min(1).optional(),
+    PAYMENT_INTEGRITY_SECRET_PARAM: z.string().trim().min(1).optional(),
+    PAYMENT_INTEGRITY_SECRET: z.string().trim().min(1).optional(),
+    PAYMENT_HTTP_TIMEOUT_MS: z.coerce.number().int().min(1).default(DEFAULT_PAYMENT_TIMEOUT_MS),
+  })
+  .superRefine((env, context) => {
+    const addIssue = (variable: keyof typeof env, message: string) => {
+      context.addIssue({ code: 'custom', path: [variable], message });
+    };
+    if (env.APP_ENV === 'prod' && env.PAYMENT_PROVIDER === 'fake') {
+      addIssue('PAYMENT_PROVIDER', 'the fake payment provider is not allowed in prod');
+    }
+    if (env.PAYMENT_PROVIDER !== 'http') {
+      return;
+    }
+    if (!env.PAYMENT_API_BASE_URL) {
+      addIssue('PAYMENT_API_BASE_URL', 'required by the http payment provider');
+    }
+    if (!env.PAYMENT_PUBLIC_KEY) {
+      addIssue('PAYMENT_PUBLIC_KEY', 'required by the http payment provider');
+    }
+    if (!env.PAYMENT_PRIVATE_KEY_PARAM && !env.PAYMENT_PRIVATE_KEY) {
+      addIssue('PAYMENT_PRIVATE_KEY_PARAM', 'set it or PAYMENT_PRIVATE_KEY');
+    }
+    if (!env.PAYMENT_INTEGRITY_SECRET_PARAM && !env.PAYMENT_INTEGRITY_SECRET) {
+      addIssue('PAYMENT_INTEGRITY_SECRET_PARAM', 'set it or PAYMENT_INTEGRITY_SECRET');
+    }
+  });
 
 export type AppEnv = (typeof APP_ENVS)[number];
 export type LogLevel = (typeof LOG_LEVELS)[number];
@@ -54,6 +90,20 @@ export interface DynamoDbConnection {
   /** Only set locally, to point the SDK at DynamoDB Local. */
   readonly dynamodbEndpoint: string | undefined;
 }
+
+/** Where a secret comes from: an SSM SecureString parameter (AWS) or its value (local). */
+export type SecretSource = { readonly parameterName: string } | { readonly value: string };
+
+export type PaymentsConfig =
+  | { readonly provider: 'fake' }
+  | {
+      readonly provider: 'http';
+      readonly apiBaseUrl: string;
+      readonly publicKey: string;
+      readonly privateKey: SecretSource;
+      readonly integritySecret: SecretSource;
+      readonly timeoutMs: number;
+    };
 
 export interface AppConfig extends DynamoDbConnection {
   readonly appEnv: AppEnv;
@@ -74,6 +124,7 @@ export interface AppConfig extends DynamoDbConnection {
     readonly serviceFeeInCents: number;
     readonly freeShippingThresholdInCents: number;
   };
+  readonly payments: PaymentsConfig;
 }
 
 type Env = Readonly<Record<string, string | undefined>>;
@@ -93,6 +144,25 @@ export const loadDynamoDbConnection = (env: Env): DynamoDbConnection => {
   const config = parseEnv(dynamoDbConnectionSchema, env);
   return { awsRegion: config.AWS_REGION, dynamodbEndpoint: config.DYNAMODB_ENDPOINT };
 };
+
+// The schema already checked that one of the two is set for the http provider.
+const secretSource = (parameterName?: string, value?: string): SecretSource =>
+  parameterName ? { parameterName } : { value: value ?? '' };
+
+const toPaymentsConfig = (config: z.infer<typeof appConfigSchema>): PaymentsConfig =>
+  config.PAYMENT_PROVIDER === 'fake'
+    ? { provider: 'fake' }
+    : {
+        provider: 'http',
+        apiBaseUrl: config.PAYMENT_API_BASE_URL ?? '',
+        publicKey: config.PAYMENT_PUBLIC_KEY ?? '',
+        privateKey: secretSource(config.PAYMENT_PRIVATE_KEY_PARAM, config.PAYMENT_PRIVATE_KEY),
+        integritySecret: secretSource(
+          config.PAYMENT_INTEGRITY_SECRET_PARAM,
+          config.PAYMENT_INTEGRITY_SECRET,
+        ),
+        timeoutMs: config.PAYMENT_HTTP_TIMEOUT_MS,
+      };
 
 export const loadAppConfig = (env: Env): AppConfig => {
   const config = parseEnv(appConfigSchema, env);
@@ -118,5 +188,6 @@ export const loadAppConfig = (env: Env): AppConfig => {
       serviceFeeInCents: config.SERVICE_FEE_IN_CENTS,
       freeShippingThresholdInCents: config.FREE_SHIPPING_THRESHOLD_IN_CENTS,
     },
+    payments: toPaymentsConfig(config),
   };
 };
