@@ -16,6 +16,14 @@ const FAKE_DOCUMENTS_URL = 'https://example.com/legal';
 const FAKE_TOKENIZATION_KEY = '-----BEGIN PUBLIC KEY----- fake -----END PUBLIC KEY-----';
 export const FAKE_EVENTS = { secret: 'fake-events-secret', environment: 'test' };
 
+// The web's fake tokenizer writes the last four digits in the token: tok_fake_<outcome>_<last4>_<n>.
+const LAST_FOUR_IN_TOKEN = /^tok_fake_[a-z]+_(\d{4})_/;
+const DEFAULT_LAST_FOUR = '0000';
+export const FAKE_DECLINED_MESSAGE = 'Transacción rechazada por la pasarela de prueba local';
+
+const lastFourOf = (cardToken: string): string =>
+  LAST_FOUR_IN_TOKEN.exec(cardToken)?.[1] ?? DEFAULT_LAST_FOUR;
+
 const outcomeFor = (cardToken: string): ProviderPaymentStatus => {
   if (cardToken.startsWith(FAKE_APPROVED_TOKEN_PREFIX)) {
     return 'APPROVED';
@@ -77,7 +85,7 @@ export class FakePaymentGateway implements PaymentGateway {
       amount: request.amount,
       statusMessage: null,
       cardBrand: 'VISA',
-      cardLastFour: '4242',
+      cardLastFour: lastFourOf(request.cardToken),
     };
     this.payments.set(payment.providerTransactionId, {
       payment,
@@ -109,7 +117,7 @@ export class FakePaymentGateway implements PaymentGateway {
     return {
       ...record.payment,
       status: record.outcome,
-      statusMessage: record.outcome === 'DECLINED' ? 'Declined by the fake payment provider' : null,
+      statusMessage: record.outcome === 'DECLINED' ? FAKE_DECLINED_MESSAGE : null,
     };
   }
 }
