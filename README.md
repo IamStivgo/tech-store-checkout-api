@@ -245,6 +245,21 @@ npm run start:dev               # http://localhost:3000/api/v1/products
 
 `docker compose down -v` detiene DynamoDB Local y borra sus datos.
 
+### Ejecución local con Docker
+
+Sin Node.js ni cuenta de AWS: solo Docker.
+
+```bash
+docker compose up --build    # API en http://localhost:3000/api/v1
+docker compose down -v       # detiene todo y borra los datos
+```
+
+- `dynamodb`: DynamoDB Local con los datos en un volumen.
+- `api-init`: crea las tablas y carga el catálogo; se puede repetir sin duplicar nada.
+- `api`: la imagen de producción del API (`Dockerfile` multi-stage con Node.js 24 Alpine, solo dependencias de producción, usuario sin privilegios y `HEALTHCHECK` contra `/api/v1/health`), con la pasarela falsa: el token `tok_fake_approved_4242_1` aprueba el pago y `tok_fake_declined_1111_1` lo rechaza.
+
+La colección de Postman funciona contra este stack con `baseUrl` = `http://localhost:3000/api/v1` y `cardToken` = `tok_fake_approved_4242_1`. El repositorio web levanta la tienda completa sobre este mismo stack.
+
 ## Despliegue (GitHub Actions con OIDC, sin llaves de AWS)
 
 La infraestructura (Lambdas, API Gateway, CloudFront, tablas y roles) vive en [tech-store-checkout-infra](https://github.com/IamStivgo/tech-store-checkout-infra); este repositorio solo despliega su código. Los nombres de los recursos se leen de los parámetros SSM `/checkout-app/prod/deploy/*`.

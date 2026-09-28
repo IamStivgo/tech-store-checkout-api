@@ -76,3 +76,26 @@ jobs:
 
       - name: Audit dependencies
         run: npm audit --audit-level=high
+
+  docker:
+    name: Docker stack
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # DynamoDB Local, tables, seed and the API image, waiting for its health check.
+      - name: Start the local stack
+        run: docker compose up --build --detach --wait api
+
+      - name: Smoke test the catalog
+        run: curl --fail --silent --show-error http://127.0.0.1:3000/api/v1/products > /dev/null
+
+      - name: Logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Stop the stack
+        if: always()
+        run: docker compose down -v

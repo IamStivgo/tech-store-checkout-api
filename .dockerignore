@@ -1,0 +1,13 @@
+node_modules
+dist
+dist-lambda
+dist-lambda.zip
+dist-api-docs
+coverage
+.env
+.env.*
+!.env.example
+.git
+.github
+.husky
+*.log
