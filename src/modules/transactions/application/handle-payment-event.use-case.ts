@@ -1,8 +1,11 @@
+import type { Clock } from '../../../shared/domain/clock.port';
 import type { PersistenceError } from '../../../shared/domain/persistence-error';
 import { errAsync, okAsync, type ResultAsync } from '../../../shared/domain/result';
 import type { InvalidEventSignatureError } from '../../payments/domain/payment-gateway.errors';
 import type { PaymentGateway } from '../../payments/domain/payment-gateway.port';
 import { isFinalPaymentStatus } from '../../payments/domain/provider-payment';
+import { webhookReceivedEvents } from '../domain/transaction-event';
+import type { TransactionEventRepository } from '../domain/transaction-event.repository.port';
 import type { TransactionNotFoundError } from '../domain/transaction.errors';
 import type { TransactionRepository } from '../domain/transaction.repository.port';
 
@@ -22,8 +25,10 @@ export type HandlePaymentEventError =
 export class HandlePaymentEvent {
   constructor(
     private readonly transactions: TransactionRepository,
+    private readonly events: TransactionEventRepository,
     private readonly gateway: PaymentGateway,
     private readonly applyResult: ApplyPaymentResult,
+    private readonly clock: Clock,
   ) {}
 
   execute(event: unknown): ResultAsync<PaymentEventOutcome, HandlePaymentEventError> {
@@ -39,7 +44,13 @@ export class HandlePaymentEvent {
       .findByReference(payment.reference)
       .andThen((transaction) =>
         transaction
-          ? this.applyResult.execute(transaction, payment).map((): PaymentEventOutcome => 'applied')
+          ? this.applyResult
+              .execute(transaction, payment, 'WEBHOOK')
+              .andThen(({ outcome }) =>
+                this.events
+                  .append(webhookReceivedEvents(transaction, payment, outcome, this.clock.now()))
+                  .map((): PaymentEventOutcome => 'applied'),
+              )
           : okAsync<PaymentEventOutcome>('ignored'),
       );
   }

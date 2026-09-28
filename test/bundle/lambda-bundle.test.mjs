@@ -19,6 +19,7 @@ Object.assign(process.env, {
   TABLE_CUSTOMERS: 'checkout-app-test-customers',
   TABLE_TRANSACTIONS: 'checkout-app-test-transactions',
   TABLE_DELIVERIES: 'checkout-app-test-deliveries',
+  TABLE_TRANSACTION_EVENTS: 'checkout-app-test-transaction-events',
   TABLE_IDEMPOTENCY: 'checkout-app-test-idempotency-keys',
   // Nothing listens there: the bundle never reaches AWS from the tests.
   DYNAMODB_ENDPOINT: 'http://127.0.0.1:9',

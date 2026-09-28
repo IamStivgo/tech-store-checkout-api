@@ -42,6 +42,7 @@ const appConfigSchema = dynamoDbConnectionSchema
     TABLE_CUSTOMERS: z.string().trim().min(1),
     TABLE_TRANSACTIONS: z.string().trim().min(1),
     TABLE_DELIVERIES: z.string().trim().min(1),
+    TABLE_TRANSACTION_EVENTS: z.string().trim().min(1),
     TABLE_IDEMPOTENCY: z.string().trim().min(1),
     LOW_STOCK_THRESHOLD: z.coerce.number().int().min(0).default(DEFAULT_LOW_STOCK_THRESHOLD),
     MAX_UNITS_PER_ORDER: z.coerce.number().int().min(1).default(DEFAULT_MAX_UNITS_PER_ORDER),
@@ -138,6 +139,7 @@ export interface AppConfig extends DynamoDbConnection {
     readonly customers: string;
     readonly transactions: string;
     readonly deliveries: string;
+    readonly transactionEvents: string;
     readonly idempotency: string;
   };
   readonly catalog: {
@@ -213,6 +215,7 @@ export const loadAppConfig = (env: Env): AppConfig => {
       customers: config.TABLE_CUSTOMERS,
       transactions: config.TABLE_TRANSACTIONS,
       deliveries: config.TABLE_DELIVERIES,
+      transactionEvents: config.TABLE_TRANSACTION_EVENTS,
       idempotency: config.TABLE_IDEMPOTENCY,
     },
     catalog: {

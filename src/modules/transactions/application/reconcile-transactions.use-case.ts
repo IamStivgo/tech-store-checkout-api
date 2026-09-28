@@ -5,6 +5,11 @@ import type { PaymentGatewayError } from '../../payments/domain/payment-gateway.
 import type { PaymentGateway } from '../../payments/domain/payment-gateway.port';
 import { isFinalPaymentStatus, type ProviderPayment } from '../../payments/domain/provider-payment';
 import type { CheckoutUnitOfWork } from '../domain/checkout-unit-of-work.port';
+import {
+  claimReleasedEvents,
+  finalizationEvents,
+  paymentSubmittedEvents,
+} from '../domain/transaction-event';
 import type { Transaction, TransactionPayment } from '../domain/transaction.entity';
 import type { TransactionNotFoundError } from '../domain/transaction.errors';
 import type { TransactionRepository } from '../domain/transaction.repository.port';
@@ -69,7 +74,10 @@ export class ReconcileTransactions {
       const expired = transaction.expire(now);
       return expired
         ? this.deps.checkout
-            .closeAndReleaseStock(expired)
+            .closeAndReleaseStock(
+              expired,
+              finalizationEvents(transaction, expired, 'RECONCILIATION'),
+            )
             .map((outcome): Outcome => (outcome === 'applied' ? 'expired' : 'unchanged'))
         : okAsync('unchanged');
     }
@@ -94,19 +102,26 @@ export class ReconcileTransactions {
     now: Date,
   ): ResultAsync<Outcome, ReconcileError> {
     if (found && isFinalPaymentStatus(found.status)) {
-      return this.deps.applyResult.execute(transaction, found).map((): Outcome => 'synced');
+      return this.deps.applyResult
+        .execute(transaction, found, 'RECONCILIATION')
+        .map((): Outcome => 'synced');
     }
     if (found) {
       // Still PENDING at the provider: keep its id so the next run asks for it directly.
+      const recorded = transaction.withProviderPayment(found, now);
       return this.deps.transactions
-        .recordProviderPayment(transaction.withProviderPayment(found, now))
+        .recordProviderPayment(recorded, paymentSubmittedEvents(recorded, 'RECONCILIATION'))
         .map((): Outcome => 'unchanged');
     }
     const lost = now.getTime() - payment.submittedAt.getTime() >= this.deps.lostClaimAfterMs;
     // The provider never got it: forget the claim, so the reservation can expire.
     return lost
       ? this.deps.transactions
-          .releasePaymentClaim(transaction.id, payment.attemptId)
+          .releasePaymentClaim(
+            transaction.id,
+            payment.attemptId,
+            claimReleasedEvents(transaction, 'RECONCILIATION', now),
+          )
           .map((): Outcome => 'unchanged')
       : okAsync('unchanged');
   }

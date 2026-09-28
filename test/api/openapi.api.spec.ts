@@ -36,6 +36,7 @@ describe('OpenAPI contract', () => {
       '/api/v1/transactions',
       '/api/v1/transactions/{transactionId}',
       '/api/v1/transactions/{transactionId}/delivery',
+      '/api/v1/transactions/{transactionId}/events',
       '/api/v1/transactions/{transactionId}/payment',
       '/api/v1/webhooks/payment-events',
     ]);
@@ -63,6 +64,7 @@ describe('OpenAPI contract', () => {
       'productsStock',
       'transactionsCreate',
       'transactionsDetail',
+      'transactionsEvents',
       'transactionsPay',
       'transactionsUpdate',
     ]);

@@ -54,7 +54,9 @@ export class GetTransaction {
     const next = gateway.getPayment(providerId).match({
       ok: (payment): ResultAsync<Transaction, TransactionNotFoundError | PersistenceError> =>
         isFinalPaymentStatus(payment.status)
-          ? applyResult.execute(transaction, payment).map(({ transaction: applied }) => applied)
+          ? applyResult
+              .execute(transaction, payment, 'STATUS_SYNC')
+              .map(({ transaction: applied }) => applied)
           : okAsync(transaction),
       err: () => okAsync(transaction),
     });

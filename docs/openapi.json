@@ -880,6 +880,69 @@
         ]
       }
     },
+    "/api/v1/transactions/{transactionId}/events": {
+      "get": {
+        "description": "Immutable events in chronological order: creation, stock, payment, status changes, delivery, webhook and reconciliation (ADR-012). Never personal data or tokens.",
+        "operationId": "transactionsEvents",
+        "parameters": [
+          {
+            "name": "transactionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionEventList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The resource does not exist.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get the audit timeline of a transaction",
+        "tags": [
+          "Transactions"
+        ]
+      }
+    },
     "/api/v1/transactions/{transactionId}/payment": {
       "post": {
         "description": "Answers 200 with a final status, or 202 while the payment is still PENDING (follow Location after Retry-After).",
@@ -2240,6 +2303,121 @@
           "finalizedAt",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "TransactionEvent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "TRANSACTION_CREATED",
+              "STOCK_RESERVED",
+              "STOCK_CONFIRMED",
+              "STOCK_RELEASED",
+              "PAYMENT_SUBMITTED",
+              "PAYMENT_CLAIM_RELEASED",
+              "STATUS_CHANGED",
+              "DELIVERY_ASSIGNED",
+              "WEBHOOK_RECEIVED",
+              "RESULT_MISMATCH"
+            ],
+            "example": "STATUS_CHANGED"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "CHECKOUT_API",
+              "SHORT_POLL",
+              "STATUS_SYNC",
+              "WEBHOOK",
+              "RECONCILIATION"
+            ],
+            "example": "SHORT_POLL",
+            "description": "Path that caused the event: the checkout, the payment polling, the status sync, the webhook or the reconciliation."
+          },
+          "fromStatus": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "APPROVED",
+              "DECLINED",
+              "VOIDED",
+              "ERROR",
+              "CANCELLED",
+              "EXPIRED"
+            ],
+            "example": "PENDING"
+          },
+          "toStatus": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "APPROVED",
+              "DECLINED",
+              "VOIDED",
+              "ERROR",
+              "CANCELLED",
+              "EXPIRED"
+            ],
+            "example": "APPROVED"
+          },
+          "providerTransactionId": {
+            "type": "string",
+            "example": "15113-1790566893-12345"
+          },
+          "providerStatus": {
+            "type": "string",
+            "example": "APPROVED"
+          },
+          "amountInCents": {
+            "type": "number",
+            "example": 5090000
+          },
+          "details": {
+            "type": "object",
+            "description": "Extra data without personal data, e.g. `{ quantity }`, `{ deliveryId }` or `{ result }`.",
+            "example": {
+              "quantity": 1
+            }
+          },
+          "requestId": {
+            "type": "string",
+            "description": "Id of the request (or scheduled run) that caused it, as in the logs."
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "source",
+          "requestId",
+          "occurredAt"
+        ]
+      },
+      "TransactionEventList": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TransactionEvent"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ListMeta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
         ]
       },
       "PayTransactionRequest": {

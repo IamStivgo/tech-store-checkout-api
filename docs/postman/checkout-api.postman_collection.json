@@ -580,6 +580,37 @@
           ]
         },
         {
+          "name": "Bitácora de la transacción",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transactions/{{transactionId}}/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["transactions", "{{transactionId}}", "events"]
+            },
+            "description": "Línea de tiempo inmutable de la transacción: creación, stock, pago, cambios de estado, entrega, webhook y conciliación, con el camino (`source`) que causó cada evento. Nunca incluye datos personales ni tokens."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "const types = pm.response.json().data.map((event) => event.type);",
+                  "pm.test('Empieza con la creación y el pago enviado', () => pm.expect(types).to.include.members(['TRANSACTION_CREATED', 'PAYMENT_SUBMITTED']));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Entrega de la transacción",
           "request": {
             "method": "GET",

@@ -4,7 +4,8 @@ import type { PersistenceError } from '../../../shared/domain/persistence-error'
 import { okAsync, type ResultAsync } from '../../../shared/domain/result';
 import { Delivery } from '../../deliveries/domain/delivery.entity';
 import type { ProviderPayment } from '../../payments/domain/provider-payment';
-import type { CheckoutUnitOfWork } from '../domain/checkout-unit-of-work.port';
+import type { ApplyOutcome, CheckoutUnitOfWork } from '../domain/checkout-unit-of-work.port';
+import { finalizationEvents, type TransactionEventSource } from '../domain/transaction-event';
 import type { Transaction } from '../domain/transaction.entity';
 import type { TransactionNotFoundError } from '../domain/transaction.errors';
 import type { TransactionRepository } from '../domain/transaction.repository.port';
@@ -16,6 +17,8 @@ export interface AppliedResult {
   readonly transaction: Transaction;
   /** The result named another reference or amount: log it as a security alert. */
   readonly mismatch: boolean;
+  /** `already-final`: another path had closed the transaction, nothing changed. */
+  readonly outcome: ApplyOutcome;
 }
 
 /**
@@ -34,29 +37,34 @@ export class ApplyPaymentResult {
   execute(
     transaction: Transaction,
     payment: ProviderPayment,
+    source: TransactionEventSource,
   ): ResultAsync<AppliedResult, PersistenceError | TransactionNotFoundError> {
     const now = this.clock.now();
     const settlement = transaction.settle(payment, now, this.ids.uuid());
     if (settlement.kind === 'already-final') {
-      return okAsync({ transaction, mismatch: false });
+      return okAsync({ transaction, mismatch: false, outcome: 'already-final' });
     }
 
     const { transaction: settled, mismatch } = settlement;
+    const events = finalizationEvents(transaction, settled, source, { mismatch });
     const write =
       settled.status === 'APPROVED' && settled.deliveryId
         ? this.checkout.approveAndAssignDelivery(
             settled,
             Delivery.assignFor(settled, settled.deliveryId, now),
+            events,
           )
-        : this.checkout.closeAndReleaseStock(settled);
+        : this.checkout.closeAndReleaseStock(settled, events);
 
-    return write.andThen((outcome) =>
-      outcome === 'applied'
-        ? okAsync({ transaction: settled, mismatch })
-        : findTransaction(this.transactions, settled.id).map((current) => ({
-            transaction: current,
-            mismatch: false,
-          })),
+    return write.andThen(
+      (outcome): ResultAsync<AppliedResult, PersistenceError | TransactionNotFoundError> =>
+        outcome === 'applied'
+          ? okAsync({ transaction: settled, mismatch, outcome })
+          : findTransaction(this.transactions, settled.id).map((current) => ({
+              transaction: current,
+              mismatch: false,
+              outcome,
+            })),
     );
   }
 }

@@ -1,6 +1,7 @@
 import { UnsupportedMediaTypeException } from '@nestjs/common';
 import type { NextFunction, Request, Response } from 'express';
 
+import { runWithRequestId } from '../context/request-context';
 import { resolveRequestId } from '../logging/logger-params';
 
 /** JSON, and JSON Merge Patch (RFC 7396) for partial updates such as cancelling a transaction. */
@@ -12,7 +13,8 @@ export const JSON_CONTENT_TYPES = ['application/json', 'application/merge-patch+
  */
 export const assignRequestId = (request: Request, response: Response, next: NextFunction) => {
   request.id = resolveRequestId(request, response);
-  next();
+  // The rest of the request runs with its id at hand (audit trail, ADR-012).
+  runWithRequestId(request.id, next);
 };
 
 // An empty body (Content-Length: 0) needs no Content-Type.
