@@ -1,5 +1,28 @@
 name: tech-store-checkout-api
 
+# Local stack: DynamoDB Local, its tables and the seed catalog, and the API with the fake
+# payment provider (no AWS account or keys needed).
+#   docker compose up --build      → http://localhost:3000/api/v1/products
+#   docker compose up -d dynamodb  → only DynamoDB Local, for `npm run start:dev`
+#   docker compose down -v         → stops everything and deletes the data
+
+x-api-environment: &api-environment
+  APP_ENV: local
+  LOG_LEVEL: info
+  AWS_REGION: us-east-1
+  # DynamoDB Local accepts any credentials.
+  AWS_ACCESS_KEY_ID: local
+  AWS_SECRET_ACCESS_KEY: local
+  DYNAMODB_ENDPOINT: http://dynamodb:8000
+  TABLE_PRODUCTS: checkout-app-local-products
+  TABLE_CUSTOMERS: checkout-app-local-customers
+  TABLE_TRANSACTIONS: checkout-app-local-transactions
+  TABLE_DELIVERIES: checkout-app-local-deliveries
+  TABLE_TRANSACTION_EVENTS: checkout-app-local-transaction-events
+  TABLE_IDEMPOTENCY: checkout-app-local-idempotency-keys
+  CORS_ALLOWED_ORIGINS: http://localhost:5173,http://localhost:8080
+  PAYMENT_PROVIDER: fake
+
 services:
   dynamodb:
     image: amazon/dynamodb-local:3.3.1
@@ -10,6 +33,28 @@ services:
       - '127.0.0.1:8000:8000'
     volumes:
       - dynamodb-data:/home/dynamodblocal/data
+
+  # Creates the tables and loads the catalog, then exits; both steps can run again safely.
+  api-init:
+    build:
+      context: .
+      target: build
+    command: ['sh', '-c', 'npm run db:create-tables && npm run seed']
+    environment: *api-environment
+    depends_on:
+      - dynamodb
+    # DynamoDB Local may still be starting on the first attempt.
+    restart: on-failure:5
+
+  api:
+    build: .
+    image: tech-store-checkout-api:local
+    environment: *api-environment
+    ports:
+      - '127.0.0.1:3000:3000'
+    depends_on:
+      api-init:
+        condition: service_completed_successfully
 
 volumes:
   dynamodb-data:
