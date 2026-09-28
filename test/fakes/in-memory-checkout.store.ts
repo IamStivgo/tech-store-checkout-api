@@ -45,6 +45,16 @@ export class InMemoryCheckoutStore implements TransactionRepository, CheckoutUni
     return this.failure ? errAsync(this.failure) : okAsync(this.transactions.get(id) ?? null);
   }
 
+  findPending(limit: number): ResultAsync<Transaction[], PersistenceError> {
+    if (this.failure) {
+      return errAsync(this.failure);
+    }
+    const pending = [...this.transactions.values()]
+      .filter(({ status }) => status === 'PENDING')
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    return okAsync(pending.slice(0, limit));
+  }
+
   reserveStockAndCreate(
     transaction: Transaction,
   ): ResultAsync<void, InsufficientStockError | ProductNotFoundError | PersistenceError> {

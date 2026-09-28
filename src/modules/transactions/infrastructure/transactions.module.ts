@@ -29,6 +29,7 @@ import { CancelTransaction } from '../application/cancel-transaction.use-case';
 import { CreateTransaction } from '../application/create-transaction.use-case';
 import { GetTransaction } from '../application/get-transaction.use-case';
 import { ProcessPayment } from '../application/process-payment.use-case';
+import { ReconcileTransactions } from '../application/reconcile-transactions.use-case';
 import type { CheckoutUnitOfWork } from '../domain/checkout-unit-of-work.port';
 import type { TransactionRepository } from '../domain/transaction.repository.port';
 
@@ -39,6 +40,9 @@ import { CHECKOUT_UNIT_OF_WORK, TRANSACTION_REPOSITORY } from './transaction-tok
 
 // About 8 s of waiting for the final result before answering 202 (backend design §6.2).
 const PAYMENT_POLL_DELAYS_MS = [1000, 1500, 2000, 2500];
+// The scheduler runs every 5 minutes; each run reviews the oldest PENDING transactions.
+const RECONCILE_BATCH_SIZE = 50;
+const LOST_CLAIM_AFTER_MS = 10 * 60_000;
 
 @Module({
   imports: [ProductsModule, CustomersModule, CoverageModule, PricingModule, PaymentsModule],
@@ -152,6 +156,33 @@ const PAYMENT_POLL_DELAYS_MS = [1000, 1500, 2000, 2500];
           pollDelaysMs: PAYMENT_POLL_DELAYS_MS,
         }),
     },
+    {
+      provide: ReconcileTransactions,
+      inject: [
+        TRANSACTION_REPOSITORY,
+        CHECKOUT_UNIT_OF_WORK,
+        PAYMENT_GATEWAY,
+        ApplyPaymentResult,
+        CLOCK,
+      ],
+      useFactory: (
+        transactions: TransactionRepository,
+        checkout: CheckoutUnitOfWork,
+        gateway: PaymentGateway,
+        applyResult: ApplyPaymentResult,
+        clock: Clock,
+      ) =>
+        new ReconcileTransactions({
+          transactions,
+          checkout,
+          gateway,
+          applyResult,
+          clock,
+          batchSize: RECONCILE_BATCH_SIZE,
+          lostClaimAfterMs: LOST_CLAIM_AFTER_MS,
+        }),
+    },
   ],
+  exports: [ReconcileTransactions],
 })
 export class TransactionsModule {}
