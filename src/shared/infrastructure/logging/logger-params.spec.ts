@@ -30,6 +30,16 @@ describe('resolveRequestId', () => {
     expect(response.setHeader).toHaveBeenCalledWith('x-request-id', 'abc-123_DEF.9');
   });
 
+  it('reuses the id the app already assigned to the request', () => {
+    const response = responseMock();
+    const request = Object.assign(requestWith({ 'x-request-id': 'from-client' }), {
+      id: 'assigned-id',
+    });
+
+    expect(resolveRequestId(request, response as unknown as ServerResponse)).toBe('assigned-id');
+    expect(response.setHeader).not.toHaveBeenCalled();
+  });
+
   it.each([
     ['missing', {}],
     ['with unsafe characters', { 'x-request-id': 'id\n{"level":60}' }],

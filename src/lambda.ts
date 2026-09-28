@@ -1,11 +1,11 @@
 import { configure as serverlessExpress } from '@codegenie/serverless-express';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import type {
   APIGatewayProxyEventV2,
   APIGatewayProxyStructuredResultV2,
   Context,
 } from 'aws-lambda';
-import type { Express } from 'express';
 
 import { AppModule } from './app.module';
 import type { AppConfig } from './config/app-config';
@@ -19,12 +19,15 @@ export type ApiGatewayHandler = (
 ) => Promise<APIGatewayProxyStructuredResultV2>;
 
 const bootstrap = async (): Promise<ApiGatewayHandler> => {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true, abortOnError: false });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bufferLogs: true,
+    abortOnError: false,
+  });
   configureApp(app, app.get<AppConfig>(APP_CONFIG));
   await app.init();
 
   const proxy = serverlessExpress<APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2>({
-    app: app.getHttpAdapter().getInstance() as Express,
+    app: app.getHttpAdapter().getInstance(),
   });
   return async (event, context) =>
     (await proxy(event, context, () => undefined)) as APIGatewayProxyStructuredResultV2;
