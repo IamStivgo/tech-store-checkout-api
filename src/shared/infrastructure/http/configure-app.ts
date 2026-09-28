@@ -6,7 +6,12 @@ import { Logger } from 'nestjs-pino';
 import type { AppConfig } from '../../../config/app-config';
 
 import { ProblemDetailsFilter } from './problem-details.filter';
-import { assignRequestId, JSON_CONTENT_TYPES, rejectNonJsonBody } from './request-guards';
+import {
+  assignRequestId,
+  JSON_CONTENT_TYPES,
+  rejectNonJsonBody,
+  requireOriginSecret,
+} from './request-guards';
 
 export const GLOBAL_PREFIX = 'api';
 export const DEFAULT_API_VERSION = '1';
@@ -33,6 +38,9 @@ const helmetOptions: Parameters<typeof helmet>[0] = {
 export const configureApp = (app: NestExpressApplication, config: AppConfig): void => {
   app.useLogger(app.get(Logger));
   app.use(assignRequestId);
+  if (config.originVerifySecret) {
+    app.use(requireOriginSecret(config.originVerifySecret));
+  }
   app.use(helmet(helmetOptions));
   app.use(rejectNonJsonBody);
   app.useBodyParser('json', { limit: MAX_BODY_SIZE, type: JSON_CONTENT_TYPES });

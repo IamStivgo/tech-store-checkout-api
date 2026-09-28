@@ -21,6 +21,7 @@ describe('loadAppConfig', () => {
       logLevel: 'info',
       port: 3000,
       corsAllowedOrigins: [],
+      originVerifySecret: undefined,
       awsRegion: 'us-east-1',
       dynamodbEndpoint: undefined,
       tables: {
@@ -75,6 +76,7 @@ describe('loadAppConfig', () => {
       logLevel: 'warn',
       port: 8080,
       corsAllowedOrigins: ['http://localhost:5173', 'http://localhost:8080'],
+      originVerifySecret: undefined,
       awsRegion: 'us-east-2',
       dynamodbEndpoint: 'http://localhost:8000',
       tables: {
