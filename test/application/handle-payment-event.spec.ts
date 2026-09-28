@@ -21,8 +21,10 @@ const setup = () => {
   const clock = new FakeClock(new Date('2026-09-24T20:17:00.000Z'));
   const handle = new HandlePaymentEvent(
     store,
+    store,
     new FakePaymentGateway(),
     new ApplyPaymentResult(store, store, new FakeIdGenerator([DELIVERY_ID]), clock),
+    clock,
   );
   return { store, handle };
 };

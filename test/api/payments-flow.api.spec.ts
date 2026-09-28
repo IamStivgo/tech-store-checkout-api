@@ -7,6 +7,7 @@ import { PAYMENT_GATEWAY } from '../../src/modules/payments/infrastructure/payme
 import { PRODUCT_REPOSITORY } from '../../src/modules/products/infrastructure/product-repository.token';
 import {
   CHECKOUT_UNIT_OF_WORK,
+  TRANSACTION_EVENT_REPOSITORY,
   TRANSACTION_REPOSITORY,
 } from '../../src/modules/transactions/infrastructure/transaction-tokens';
 import { okAsync } from '../../src/shared/domain/result';
@@ -64,6 +65,7 @@ describe('Transaction payment API', () => {
         { provide: CUSTOMER_REPOSITORY, useValue: new InMemoryCustomerRepository([aCustomer()]) },
         { provide: TRANSACTION_REPOSITORY, useValue: store },
         { provide: CHECKOUT_UNIT_OF_WORK, useValue: store },
+        { provide: TRANSACTION_EVENT_REPOSITORY, useValue: store },
         { provide: IDEMPOTENCY_RECORD_REPOSITORY, useValue: new InMemoryIdempotencyRepository() },
         { provide: ID_GENERATOR, useValue: new FakeIdGenerator(['attempt-1', 'delivery-1']) },
         { provide: PAYMENT_GATEWAY, useValue: gateway },
@@ -74,6 +76,38 @@ describe('Transaction payment API', () => {
 
   afterEach(async () => {
     await app.close();
+  });
+
+  it('keeps the audit timeline of the payment, never with personal data', async () => {
+    await pay();
+
+    const response = await request(app.getHttpServer()).get(
+      `/api/v1/transactions/${TRANSACTION_ID}/events`,
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers['cache-control']).toBe('no-store');
+    const { data, meta } = response.body as {
+      data: { type: string; source: string; toStatus?: string }[];
+      meta: { count: number };
+    };
+    expect(data.map(({ type, source }) => `${type}/${source}`)).toEqual([
+      'PAYMENT_SUBMITTED/CHECKOUT_API',
+      'STATUS_CHANGED/SHORT_POLL',
+      'STOCK_CONFIRMED/SHORT_POLL',
+      'DELIVERY_ASSIGNED/SHORT_POLL',
+    ]);
+    expect(data[1]).toMatchObject({ fromStatus: 'PENDING', toStatus: 'APPROVED' });
+    expect(meta.count).toBe(4);
+    expect(JSON.stringify(data)).not.toMatch(/Ana|3001234567|tok_|fake\.endUserPolicy/);
+  });
+
+  it('answers 404 for the timeline of an unknown transaction', async () => {
+    const response = await request(app.getHttpServer()).get(
+      '/api/v1/transactions/00000000-0000-4000-8000-000000000000/events',
+    );
+
+    expect(response.status).toBe(404);
   });
 
   it('answers 200 with the approved transaction and its delivery', async () => {

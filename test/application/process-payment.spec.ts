@@ -258,12 +258,17 @@ describe('ApplyPaymentResult', () => {
     const apply = new ApplyPaymentResult(store, store, new FakeIdGenerator([DELIVERY_ID]), clock);
 
     const { transaction, mismatch } = unwrap(
-      await apply.execute(claimed, aProviderPayment({ amount: cop(1_000) })),
+      await apply.execute(claimed, aProviderPayment({ amount: cop(1_000) }), 'WEBHOOK'),
     );
 
     expect(mismatch).toBe(true);
     expect(transaction.status).toBe('ERROR');
     expect(store.transactions.get(TRANSACTION_ID)?.status).toBe('ERROR');
+    expect(store.eventsOf(TRANSACTION_ID).map(({ type, source }) => `${type}/${source}`)).toEqual([
+      'RESULT_MISMATCH/WEBHOOK',
+      'STATUS_CHANGED/WEBHOOK',
+      'STOCK_RELEASED/WEBHOOK',
+    ]);
   });
 
   it('returns a final transaction unchanged', async () => {
@@ -271,7 +276,10 @@ describe('ApplyPaymentResult', () => {
     const approved = aStoredTransaction({ status: 'APPROVED' });
     const apply = new ApplyPaymentResult(store, store, new FakeIdGenerator([DELIVERY_ID]), clock);
 
-    expect(unwrap(await apply.execute(approved, aProviderPayment())).transaction).toBe(approved);
+    const result = unwrap(await apply.execute(approved, aProviderPayment(), 'STATUS_SYNC'));
+
+    expect(result).toMatchObject({ transaction: approved, outcome: 'already-final' });
+    expect(store.events).toEqual([]);
   });
 
   it('returns the stored state when another path applied a result first', async () => {
@@ -281,7 +289,11 @@ describe('ApplyPaymentResult', () => {
     const apply = new ApplyPaymentResult(store, store, new FakeIdGenerator([DELIVERY_ID]), clock);
 
     const { transaction, mismatch } = unwrap(
-      await apply.execute(aTransaction().claimPayment('attempt-1', 1, NOW), aProviderPayment()),
+      await apply.execute(
+        aTransaction().claimPayment('attempt-1', 1, NOW),
+        aProviderPayment(),
+        'RECONCILIATION',
+      ),
     );
 
     expect(transaction.status).toBe('DECLINED');

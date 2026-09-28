@@ -2,6 +2,7 @@ import { loadAppConfig } from '../src/config/app-config';
 import { customersTableDefinition } from '../src/modules/customers/infrastructure/persistence/customers-table.definition';
 import { deliveriesTableDefinition } from '../src/modules/deliveries/infrastructure/persistence/deliveries-table.definition';
 import { productsTableDefinition } from '../src/modules/products/infrastructure/persistence/products-table.definition';
+import { transactionEventsTableDefinition } from '../src/modules/transactions/infrastructure/persistence/transaction-events-table.definition';
 import { transactionsTableDefinition } from '../src/modules/transactions/infrastructure/persistence/transactions-table.definition';
 import { createTables } from '../src/shared/infrastructure/persistence/create-tables';
 import { createDynamoDbClient } from '../src/shared/infrastructure/persistence/dynamodb-client.factory';
@@ -22,6 +23,7 @@ const main = async (): Promise<void> => {
     transactionsTableDefinition(config.tables.transactions),
     deliveriesTableDefinition(config.tables.deliveries),
     idempotencyKeysTableDefinition(config.tables.idempotency),
+    transactionEventsTableDefinition(config.tables.transactionEvents),
   ]);
 
   for (const [table, outcome] of outcomes) {

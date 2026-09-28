@@ -32,9 +32,15 @@ import { parseUuidParam } from '../../../../shared/infrastructure/http/parse-uui
 import { toHttpResponse } from '../../../../shared/infrastructure/http/to-http-response';
 import { CancelTransaction } from '../../application/cancel-transaction.use-case';
 import { CreateTransaction } from '../../application/create-transaction.use-case';
+import { GetTransactionEvents } from '../../application/get-transaction-events.use-case';
 import { GetTransaction } from '../../application/get-transaction.use-case';
 import { ProcessPayment } from '../../application/process-payment.use-case';
 
+import { TransactionEventListSchema } from './transaction-event.openapi';
+import {
+  toTransactionEventListResponse,
+  type TransactionEventListResponse,
+} from './transaction-event.response';
 import {
   parseCreateTransactionBody,
   parsePayTransactionBody,
@@ -62,6 +68,7 @@ export class TransactionsController {
     private readonly getTransaction: GetTransaction,
     private readonly cancelTransaction: CancelTransaction,
     private readonly processPayment: ProcessPayment,
+    private readonly getTransactionEvents: GetTransactionEvents,
   ) {}
 
   @Post()
@@ -111,6 +118,24 @@ export class TransactionsController {
     @Param('transactionId', parseUuidParam('transactionId')) transactionId: string,
   ): Promise<TransactionResponse> {
     return toTransactionResponse(await toHttpResponse(this.getTransaction.execute(transactionId)));
+  }
+
+  @Get(':transactionId/events')
+  @Header('Cache-Control', 'no-store')
+  @ApiOperation({
+    summary: 'Get the audit timeline of a transaction',
+    description:
+      'Immutable events in chronological order: creation, stock, payment, status changes, delivery, webhook and reconciliation (ADR-012). Never personal data or tokens.',
+  })
+  @ApiParam(TRANSACTION_ID_PARAM)
+  @ApiOkResponse({ type: TransactionEventListSchema })
+  @ApiProblemResponses(HttpStatus.BAD_REQUEST, HttpStatus.NOT_FOUND)
+  async events(
+    @Param('transactionId', parseUuidParam('transactionId')) transactionId: string,
+  ): Promise<TransactionEventListResponse> {
+    return toTransactionEventListResponse(
+      await toHttpResponse(this.getTransactionEvents.execute(transactionId)),
+    );
   }
 
   @Post(':transactionId/payment')

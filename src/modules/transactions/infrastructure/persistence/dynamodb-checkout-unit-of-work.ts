@@ -7,15 +7,18 @@ import type { Delivery } from '../../../deliveries/domain/delivery.entity';
 import { toDeliveryItem } from '../../../deliveries/infrastructure/persistence/delivery.mapper';
 import { ProductNotFoundError } from '../../../products/domain/product.errors';
 import type { ApplyOutcome, CheckoutUnitOfWork } from '../../domain/checkout-unit-of-work.port';
+import type { TransactionEvent } from '../../domain/transaction-event';
 import type { Transaction } from '../../domain/transaction.entity';
 import { InsufficientStockError } from '../../domain/transaction.errors';
 
+import { toEventPuts } from './transaction-event.mapper';
 import { toPaymentItem, toTransactionItem } from './transaction.mapper';
 
 export interface CheckoutTables {
   readonly products: string;
   readonly transactions: string;
   readonly deliveries: string;
+  readonly transactionEvents: string;
 }
 
 const CONDITION_FAILED = 'ConditionalCheckFailed';
@@ -38,6 +41,7 @@ export class DynamoDbCheckoutUnitOfWork implements CheckoutUnitOfWork {
 
   reserveStockAndCreate(
     transaction: Transaction,
+    events: readonly TransactionEvent[],
   ): ResultAsync<void, InsufficientStockError | ProductNotFoundError | PersistenceError> {
     const now = transaction.createdAt.toISOString();
     const write = this.client.send(
@@ -68,6 +72,7 @@ export class DynamoDbCheckoutUnitOfWork implements CheckoutUnitOfWork {
               ConditionExpression: 'attribute_not_exists(transactionId)',
             },
           },
+          ...toEventPuts(this.tables.transactionEvents, events),
         ],
       }),
     );
@@ -84,6 +89,7 @@ export class DynamoDbCheckoutUnitOfWork implements CheckoutUnitOfWork {
   approveAndAssignDelivery(
     transaction: Transaction,
     delivery: Delivery,
+    events: readonly TransactionEvent[],
   ): ResultAsync<ApplyOutcome, PersistenceError> {
     const now = transaction.updatedAt.toISOString();
     return this.finalize(
@@ -116,13 +122,17 @@ export class DynamoDbCheckoutUnitOfWork implements CheckoutUnitOfWork {
                 ConditionExpression: 'attribute_not_exists(deliveryId)',
               },
             },
+            ...toEventPuts(this.tables.transactionEvents, events),
           ],
         }),
       ),
     );
   }
 
-  closeAndReleaseStock(transaction: Transaction): ResultAsync<ApplyOutcome, PersistenceError> {
+  closeAndReleaseStock(
+    transaction: Transaction,
+    events: readonly TransactionEvent[],
+  ): ResultAsync<ApplyOutcome, PersistenceError> {
     const now = transaction.updatedAt.toISOString();
     return this.finalize(
       'transactions.closeAndReleaseStock',
@@ -144,6 +154,7 @@ export class DynamoDbCheckoutUnitOfWork implements CheckoutUnitOfWork {
                 },
               },
             },
+            ...toEventPuts(this.tables.transactionEvents, events),
           ],
         }),
       ),

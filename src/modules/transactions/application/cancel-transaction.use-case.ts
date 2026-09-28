@@ -2,6 +2,7 @@ import type { Clock } from '../../../shared/domain/clock.port';
 import type { PersistenceError } from '../../../shared/domain/persistence-error';
 import { err, ok, type ResultAsync } from '../../../shared/domain/result';
 import type { CheckoutUnitOfWork } from '../domain/checkout-unit-of-work.port';
+import { finalizationEvents } from '../domain/transaction-event';
 import type { Transaction } from '../domain/transaction.entity';
 import {
   TransactionNotCancellableError,
@@ -24,10 +25,15 @@ export class CancelTransaction {
 
   execute(id: string): ResultAsync<Transaction, CancelTransactionError> {
     return findTransaction(this.transactions, id)
-      .andThen((transaction) => transaction.cancel(this.clock.now()))
-      .andThen((cancelled) =>
+      .andThen((transaction) =>
+        transaction.cancel(this.clock.now()).map((cancelled) => ({ transaction, cancelled })),
+      )
+      .andThen(({ transaction, cancelled }) =>
         this.checkout
-          .closeAndReleaseStock(cancelled)
+          .closeAndReleaseStock(
+            cancelled,
+            finalizationEvents(transaction, cancelled, 'CHECKOUT_API'),
+          )
           .andThen((outcome) => (outcome === 'applied' ? ok(cancelled) : this.alreadyFinal(id))),
       );
   }

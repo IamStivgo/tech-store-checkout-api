@@ -14,6 +14,7 @@ import {
 } from '../../payments/domain/payment-gateway.errors';
 import type { PaymentGateway } from '../../payments/domain/payment-gateway.port';
 import { isFinalPaymentStatus, type ProviderPayment } from '../../payments/domain/provider-payment';
+import { claimReleasedEvents, paymentSubmittedEvents } from '../domain/transaction-event';
 import type { Transaction } from '../domain/transaction.entity';
 import type {
   PaymentAlreadySubmittedError,
@@ -157,7 +158,11 @@ export class ProcessPayment {
     error: ProcessPaymentError,
   ): Promise<Result<never, ProcessPaymentError>> {
     const attemptId = claimed.payment?.attemptId ?? '';
-    await this.deps.transactions.releasePaymentClaim(claimed.id, attemptId);
+    await this.deps.transactions.releasePaymentClaim(
+      claimed.id,
+      attemptId,
+      claimReleasedEvents(claimed, 'CHECKOUT_API', this.deps.clock.now()),
+    );
     return err(error);
   }
 
@@ -167,7 +172,7 @@ export class ProcessPayment {
   ): ResultAsync<{ recorded: Transaction; payment: ProviderPayment }, PersistenceError> {
     const recorded = claimed.withProviderPayment(payment, this.deps.clock.now());
     return this.deps.transactions
-      .recordProviderPayment(recorded)
+      .recordProviderPayment(recorded, paymentSubmittedEvents(recorded, 'CHECKOUT_API'))
       .map(() => ({ recorded, payment }));
   }
 
@@ -176,11 +181,15 @@ export class ProcessPayment {
     payment: ProviderPayment,
   ): ResultAsync<Transaction, PersistenceError | TransactionNotFoundError> {
     if (isFinalPaymentStatus(payment.status)) {
-      return this.deps.applyResult.execute(recorded, payment).map(({ transaction }) => transaction);
+      return this.deps.applyResult
+        .execute(recorded, payment, 'SHORT_POLL')
+        .map(({ transaction }) => transaction);
     }
     return new ResultAsync(this.pollForResult(payment.providerTransactionId)).andThen((final) =>
       final
-        ? this.deps.applyResult.execute(recorded, final).map(({ transaction }) => transaction)
+        ? this.deps.applyResult
+            .execute(recorded, final, 'SHORT_POLL')
+            .map(({ transaction }) => transaction)
         : okAsync(recorded),
     );
   }
