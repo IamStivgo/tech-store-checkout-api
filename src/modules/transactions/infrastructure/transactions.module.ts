@@ -43,6 +43,8 @@ const PAYMENT_POLL_DELAYS_MS = [1000, 1500, 2000, 2500];
 // The scheduler runs every 5 minutes; each run reviews the oldest PENDING transactions.
 const RECONCILE_BATCH_SIZE = 50;
 const LOST_CLAIM_AFTER_MS = 10 * 60_000;
+// Reading a PENDING transaction asks the provider at most once every 2 s (T-045).
+const TRANSACTION_SYNC_INTERVAL_MS = 2000;
 
 @Module({
   imports: [ProductsModule, CustomersModule, CoverageModule, PricingModule, PaymentsModule],
@@ -100,8 +102,19 @@ const LOST_CLAIM_AFTER_MS = 10 * 60_000;
     },
     {
       provide: GetTransaction,
-      inject: [TRANSACTION_REPOSITORY],
-      useFactory: (transactions: TransactionRepository) => new GetTransaction(transactions),
+      inject: [TRANSACTION_REPOSITORY, PAYMENT_GATEWAY, ApplyPaymentResult, CLOCK],
+      useFactory: (
+        transactions: TransactionRepository,
+        gateway: PaymentGateway,
+        applyResult: ApplyPaymentResult,
+        clock: Clock,
+      ) =>
+        new GetTransaction(transactions, {
+          gateway,
+          applyResult,
+          clock,
+          minIntervalMs: TRANSACTION_SYNC_INTERVAL_MS,
+        }),
     },
     {
       provide: CancelTransaction,

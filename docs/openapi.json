@@ -733,6 +733,7 @@
     },
     "/api/v1/transactions/{transactionId}": {
       "get": {
+        "description": "While the payment is PENDING, the payment provider is asked for the result (at most once every 2 s).",
         "operationId": "transactionsDetail",
         "parameters": [
           {
