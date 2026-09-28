@@ -35,6 +35,7 @@ describe('OpenAPI contract', () => {
       '/api/v1/transactions',
       '/api/v1/transactions/{transactionId}',
       '/api/v1/transactions/{transactionId}/payment',
+      '/api/v1/webhooks/payment-events',
     ]);
   });
 
@@ -50,6 +51,7 @@ describe('OpenAPI contract', () => {
       'healthCheck',
       'locationsCities',
       'locationsDepartments',
+      'paymentEventsReceive',
       'paymentsAcceptanceTokens',
       'paymentsTokenizationKey',
       'productsDetail',

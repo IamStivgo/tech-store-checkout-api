@@ -1,6 +1,5 @@
 import type { z } from 'zod';
 
-import { Money } from '../../../../shared/domain/money.vo';
 import { err, ok, ResultAsync, type Result } from '../../../../shared/domain/result';
 import type { AcceptanceTokens } from '../../domain/acceptance-tokens';
 import type { CardPaymentRequest } from '../../domain/card-payment-request';
@@ -8,19 +7,21 @@ import {
   PaymentProviderTimeoutError,
   PaymentProviderUnavailableError,
   PaymentRejectedByProviderError,
+  type InvalidEventSignatureError,
   type PaymentGatewayError,
 } from '../../domain/payment-gateway.errors';
 import type { PaymentGateway } from '../../domain/payment-gateway.port';
 import type { ProviderPayment } from '../../domain/provider-payment';
 
 import { integritySignature } from './integrity-signature';
+import { verifyPaymentEvent, type PaymentEventsOptions } from './payment-event';
+import { toProviderPayment } from './provider-payment.mapper';
 import {
   merchantResponseSchema,
   providerErrorSchema,
   tokenizationKeyResponseSchema,
   transactionListResponseSchema,
   transactionResponseSchema,
-  type ProviderTransaction,
 } from './provider-schemas';
 
 export interface HttpPaymentGatewayOptions {
@@ -30,6 +31,7 @@ export interface HttpPaymentGatewayOptions {
   readonly privateKey: string;
   readonly integritySecret: string;
   readonly timeoutMs: number;
+  readonly events: PaymentEventsOptions;
 }
 
 interface CachedKey {
@@ -67,21 +69,6 @@ const rejectedField = (body: unknown): string | undefined => {
   return parsed.success ? Object.keys(parsed.data.error.messages ?? {})[0] : undefined;
 };
 
-const toProviderPayment = (
-  transaction: ProviderTransaction,
-): Result<ProviderPayment, PaymentGatewayError> =>
-  Money.create(transaction.amount_in_cents, transaction.currency)
-    .map((amount) => ({
-      providerTransactionId: transaction.id,
-      reference: transaction.reference,
-      status: transaction.status,
-      amount,
-      statusMessage: transaction.status_message ?? null,
-      cardBrand: transaction.payment_method?.extra?.brand ?? null,
-      cardLastFour: transaction.payment_method?.extra?.last_four ?? null,
-    }))
-    .mapErr((cause) => new PaymentProviderUnavailableError(cause));
-
 /** Payment provider REST API (sandbox), with timeouts and validation of every answer. */
 export class HttpPaymentGateway implements PaymentGateway {
   private tokenizationKey: CachedKey | undefined;
@@ -114,6 +101,10 @@ export class HttpPaymentGateway implements PaymentGateway {
           }),
       ),
     );
+  }
+
+  parsePaymentEvent(event: unknown): Result<ProviderPayment | null, InvalidEventSignatureError> {
+    return verifyPaymentEvent(event, this.options.events);
   }
 
   createCardPayment(

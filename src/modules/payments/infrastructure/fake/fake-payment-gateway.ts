@@ -1,17 +1,20 @@
-import { errAsync, okAsync, type ResultAsync } from '../../../../shared/domain/result';
+import { errAsync, okAsync, type Result, type ResultAsync } from '../../../../shared/domain/result';
 import type { AcceptanceTokens } from '../../domain/acceptance-tokens';
 import type { CardPaymentRequest } from '../../domain/card-payment-request';
 import {
   PaymentRejectedByProviderError,
+  type InvalidEventSignatureError,
   type PaymentGatewayError,
 } from '../../domain/payment-gateway.errors';
 import type { PaymentGateway } from '../../domain/payment-gateway.port';
 import type { ProviderPayment, ProviderPaymentStatus } from '../../domain/provider-payment';
+import { verifyPaymentEvent } from '../provider/payment-event';
 
 export const FAKE_APPROVED_TOKEN_PREFIX = 'tok_fake_approved_';
 export const FAKE_DECLINED_TOKEN_PREFIX = 'tok_fake_declined_';
 const FAKE_DOCUMENTS_URL = 'https://example.com/legal';
 const FAKE_TOKENIZATION_KEY = '-----BEGIN PUBLIC KEY----- fake -----END PUBLIC KEY-----';
+export const FAKE_EVENTS = { secret: 'fake-events-secret', environment: 'test' };
 
 const outcomeFor = (cardToken: string): ProviderPaymentStatus => {
   if (cardToken.startsWith(FAKE_APPROVED_TOKEN_PREFIX)) {
@@ -35,6 +38,11 @@ export class FakePaymentGateway implements PaymentGateway {
   // Only the JWE tokenizer uses it, and never against the fake gateway (ADR-011).
   getTokenizationKey(): ResultAsync<string, PaymentGatewayError> {
     return okAsync(FAKE_TOKENIZATION_KEY);
+  }
+
+  // Local and Docker only: events signed with a known secret, for the webhook by hand.
+  parsePaymentEvent(event: unknown): Result<ProviderPayment | null, InvalidEventSignatureError> {
+    return verifyPaymentEvent(event, FAKE_EVENTS);
   }
 
   getAcceptanceTokens(): ResultAsync<AcceptanceTokens, PaymentGatewayError> {

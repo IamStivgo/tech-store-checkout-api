@@ -13,7 +13,7 @@ import { PaymentAlreadySubmittedError } from '../../domain/transaction.errors';
 import type { TransactionRepository } from '../../domain/transaction.repository.port';
 
 import { PENDING_BUCKET, toPaymentItem, toTransaction } from './transaction.mapper';
-import { PENDING_INDEX } from './transactions-table.definition';
+import { PENDING_INDEX, REFERENCE_INDEX } from './transactions-table.definition';
 
 const isConditionFailure = (cause: unknown): boolean =>
   cause instanceof ConditionalCheckFailedException;
@@ -36,6 +36,24 @@ export class DynamoDbTransactionRepository implements TransactionRepository {
       ),
       (cause) => new PersistenceError('transactions.findById', cause),
     ).andThen(({ Item }) => (Item ? toTransaction(Item) : ok(null)));
+  }
+
+  findByReference(reference: string): ResultAsync<Transaction | null, PersistenceError> {
+    return ResultAsync.fromPromise(
+      this.client.send(
+        new QueryCommand({
+          TableName: this.tableName,
+          IndexName: REFERENCE_INDEX,
+          KeyConditionExpression: 'reference = :reference',
+          ExpressionAttributeValues: { ':reference': reference },
+          Limit: 1,
+        }),
+      ),
+      (cause) => new PersistenceError('transactions.findByReference', cause),
+    ).andThen(({ Items = [] }) => {
+      const [item] = Items;
+      return item ? toTransaction(item) : ok(null);
+    });
   }
 
   findPending(limit: number): ResultAsync<Transaction[], PersistenceError> {

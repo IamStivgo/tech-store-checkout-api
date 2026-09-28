@@ -12,6 +12,7 @@ const OPTIONS = {
   privateKey: 'prv_test_key',
   integritySecret: 'integrity_secret_for_tests',
   timeoutMs: 5000,
+  events: { secret: 'events_secret_for_tests', environment: 'test' },
 };
 
 const json = (body: unknown, status = 200) =>
