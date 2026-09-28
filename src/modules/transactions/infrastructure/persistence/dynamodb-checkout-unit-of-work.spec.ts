@@ -71,7 +71,9 @@ describe('DynamoDbCheckoutUnitOfWork', () => {
         occurredAt: '2026-09-24T20:15:00.000Z',
       },
     });
-    expect(events[0]?.Put?.Item?.eventKey).toMatch(/^2026-09-24T20:15:00\.000Z#[0-9a-f-]{36}$/);
+    expect(events[0]?.Put?.Item?.eventKey).toMatch(/^2026-09-24T20:15:00\.000Z#00#[0-9a-f-]{36}$/);
+    // Same instant: the position keeps the order the domain produced them in.
+    expect(events[1]?.Put?.Item?.eventKey).toMatch(/^2026-09-24T20:15:00\.000Z#01#/);
   });
 
   describe('reserveStockAndCreate', () => {
