@@ -59,6 +59,26 @@ export class CreateTransactionRequestSchema {
   readonly shippingAddress!: ShippingAddressRequestSchema;
 }
 
+@ApiSchema({ name: 'PayTransactionRequest' })
+export class PayTransactionRequestSchema {
+  @ApiProperty({
+    description: 'Card token from the payment provider (tokenized in the browser).',
+    example: 'tok_test_4242',
+  })
+  readonly cardToken!: string;
+
+  @ApiProperty({ minimum: 1, maximum: 36, example: 1 })
+  readonly installments!: number;
+
+  @ApiProperty({
+    description: 'Single-use token of the accepted terms (GET /payments/acceptance-tokens).',
+  })
+  readonly acceptanceToken!: string;
+
+  @ApiProperty({ description: 'Single-use token of the accepted personal data processing.' })
+  readonly personalDataAuthToken!: string;
+}
+
 @ApiSchema({ name: 'UpdateTransactionRequest' })
 export class UpdateTransactionRequestSchema {
   @ApiProperty({ enum: ['CANCELLED'], description: 'The only change allowed.' })

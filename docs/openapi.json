@@ -825,6 +825,153 @@
           "Transactions"
         ]
       }
+    },
+    "/api/v1/transactions/{transactionId}/payment": {
+      "post": {
+        "description": "Answers 200 with a final status, or 202 while the payment is still PENDING (follow Location after Retry-After).",
+        "operationId": "transactionsPay",
+        "parameters": [
+          {
+            "name": "transactionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Client-generated UUID. Repeating it with the same body returns the stored response with `Idempotent-Replayed: true`; with another body, 409 IDEMPOTENCY_KEY_CONFLICT.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayTransactionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Final status.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Transaction"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Still PENDING.",
+            "headers": {
+              "Location": {
+                "description": "URL to poll.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds to wait.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Transaction"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters.\n\nInvalid request parameters.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The resource does not exist.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with the current state or a previous request.\n\nThe request conflicts with the current state or a previous request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request breaks a business rule.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The payment provider is not available.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "The payment provider did not answer in time.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Pay the transaction with a tokenized card and wait a few seconds for the result",
+        "tags": [
+          "Transactions"
+        ]
+      }
     }
   },
   "info": {
@@ -1848,6 +1995,36 @@
           "finalizedAt",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "PayTransactionRequest": {
+        "type": "object",
+        "properties": {
+          "cardToken": {
+            "type": "string",
+            "description": "Card token from the payment provider (tokenized in the browser).",
+            "example": "tok_test_4242"
+          },
+          "installments": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 36,
+            "example": 1
+          },
+          "acceptanceToken": {
+            "type": "string",
+            "description": "Single-use token of the accepted terms (GET /payments/acceptance-tokens)."
+          },
+          "personalDataAuthToken": {
+            "type": "string",
+            "description": "Single-use token of the accepted personal data processing."
+          }
+        },
+        "required": [
+          "cardToken",
+          "installments",
+          "acceptanceToken",
+          "personalDataAuthToken"
         ]
       },
       "UpdateTransactionRequest": {
