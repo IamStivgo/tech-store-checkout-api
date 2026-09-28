@@ -6,6 +6,7 @@ export const TEST_ENV = {
   LOG_LEVEL: 'silent',
   TABLE_PRODUCTS: 'checkout-app-test-products',
   TABLE_CUSTOMERS: 'checkout-app-test-customers',
+  TABLE_TRANSACTIONS: 'checkout-app-test-transactions',
   TABLE_IDEMPOTENCY: 'checkout-app-test-idempotency-keys',
 } as const;
 

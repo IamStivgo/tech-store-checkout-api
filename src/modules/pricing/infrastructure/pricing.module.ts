@@ -55,5 +55,6 @@ const toMoney = (amountInCents: number): Money =>
       ) => new QuoteCheckout(products, coverage, pricing, config.catalog, clock),
     },
   ],
+  exports: [CheckoutPricingService],
 })
 export class PricingModule {}
