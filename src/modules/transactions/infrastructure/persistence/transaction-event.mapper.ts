@@ -15,13 +15,19 @@ import { TRANSACTION_STATUSES } from '../../domain/transaction-status';
 
 const MAPPING_OPERATION = 'transactionEvents.toDomain';
 
-/** The item of an event: `eventKey` orders the timeline and makes each event unique. */
-export const toEventItem = (event: TransactionEvent): Record<string, unknown> => {
+const POSITION_DIGITS = 2;
+
+/**
+ * The item of an event. `eventKey` = `<occurredAt>#<position>#<eventId>`: the timeline follows the
+ * time and, for events of the same change (same instant), the order the domain produced them.
+ */
+export const toEventItem = (event: TransactionEvent, position = 0): Record<string, unknown> => {
   const eventId = randomUUID();
   const occurredAt = event.occurredAt.toISOString();
+  const order = String(position).padStart(POSITION_DIGITS, '0');
   return {
     ...event,
-    eventKey: `${occurredAt}#${eventId}`,
+    eventKey: `${occurredAt}#${order}#${eventId}`,
     eventId,
     requestId: currentRequestId(),
     occurredAt,
@@ -30,10 +36,10 @@ export const toEventItem = (event: TransactionEvent): Record<string, unknown> =>
 
 /** Conditional puts: an existing event is never overwritten (append-only, ADR-012). */
 export const toEventPuts = (tableName: string, events: readonly TransactionEvent[]) =>
-  events.map((event) => ({
+  events.map((event, position) => ({
     Put: {
       TableName: tableName,
-      Item: toEventItem(event),
+      Item: toEventItem(event, position),
       ConditionExpression: 'attribute_not_exists(eventKey)',
     },
   }));
