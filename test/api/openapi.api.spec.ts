@@ -27,9 +27,13 @@ describe('OpenAPI contract', () => {
       '/api/v1/health',
       '/api/v1/locations/departments',
       '/api/v1/locations/departments/{departmentCode}/cities',
+      '/api/v1/payments/acceptance-tokens',
       '/api/v1/products',
       '/api/v1/products/{productId}',
       '/api/v1/products/{productId}/stock',
+      '/api/v1/transactions',
+      '/api/v1/transactions/{transactionId}',
+      '/api/v1/transactions/{transactionId}/payment',
     ]);
   });
 
@@ -45,9 +49,14 @@ describe('OpenAPI contract', () => {
       'healthCheck',
       'locationsCities',
       'locationsDepartments',
+      'paymentsAcceptanceTokens',
       'productsDetail',
       'productsList',
       'productsStock',
+      'transactionsCreate',
+      'transactionsDetail',
+      'transactionsPay',
+      'transactionsUpdate',
     ]);
   });
 

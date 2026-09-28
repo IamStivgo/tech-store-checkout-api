@@ -1,6 +1,6 @@
-import type { INestApplication, InjectionToken, Type } from '@nestjs/common';
+import type { InjectionToken, Type } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
-import type { App } from 'supertest/types';
 
 import { AppModule } from '../../src/app.module';
 import { APP_CONFIG } from '../../src/config/app-config.token';
@@ -28,7 +28,7 @@ export const createTestApp = async ({
   clock = new FakeClock(new Date('2026-09-24T20:15:00.000Z')),
   controllers = [],
   providers = [],
-}: TestAppOptions = {}): Promise<INestApplication<App>> => {
+}: TestAppOptions = {}): Promise<NestExpressApplication> => {
   const config = aConfig(env);
   const overrides: ProviderOverride[] = [
     { provide: APP_CONFIG, useValue: config },
@@ -43,7 +43,7 @@ export const createTestApp = async ({
   );
   const moduleRef = await builder.compile();
 
-  const app = moduleRef.createNestApplication<INestApplication<App>>();
+  const app = moduleRef.createNestApplication<NestExpressApplication>();
   configureApp(app, config);
   await app.init();
   return app;

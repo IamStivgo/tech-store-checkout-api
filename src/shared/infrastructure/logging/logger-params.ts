@@ -41,6 +41,12 @@ interface SerializedResponse {
 }
 
 export const resolveRequestId = (request: IncomingMessage, response: ServerResponse): string => {
+  // Already assigned by the first middleware of the app: the logger reuses it.
+  const assigned = (request as IncomingMessage & { id?: unknown }).id;
+  if (typeof assigned === 'string') {
+    return assigned;
+  }
+
   const incoming = request.headers[REQUEST_ID_HEADER];
   const requestId =
     typeof incoming === 'string' && SAFE_REQUEST_ID.test(incoming) ? incoming : randomUUID();

@@ -7,10 +7,13 @@ import type { City, Department } from '../../src/modules/coverage/domain/locatio
 import { err, ok, type Result } from '../../src/shared/domain/result';
 
 export class InMemoryCoverageRepository implements CoverageRepository {
-  constructor(private readonly cities: readonly City[] = []) {}
+  constructor(
+    private readonly cities: readonly City[] = [],
+    private readonly departments: readonly Department[] = [],
+  ) {}
 
   listDepartments(): Department[] {
-    return [];
+    return [...this.departments];
   }
 
   listCities(departmentCode: string): Result<City[], DepartmentNotFoundError> {

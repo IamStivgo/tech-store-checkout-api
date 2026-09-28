@@ -35,6 +35,7 @@ Checkout API for a tech accessories store: product catalog, delivery pricing, cu
 - Never commit secrets, keys or real provider URLs; use placeholders and `.env` (git-ignored).
 - The card number (PAN) and CVC never reach this API; cards are tokenized in the browser.
 - Never log personal data, tokens or secrets.
+- `configureApp` hardens every entry point (local server, Lambda, tests): request id first (so errors thrown before routing keep it), helmet headers for JSON (security design §6.2), 415 for bodies that are not `application/json` and a 16 KB body limit (413). Create apps as `NestExpressApplication` and always call `configureApp` before `init`.
 
 ## Commands
 
