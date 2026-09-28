@@ -1,6 +1,7 @@
 import { writeFileSync } from 'node:fs';
 
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 
 import { AppModule } from '../src/app.module';
 import type { AppConfig } from '../src/config/app-config';
@@ -24,7 +25,10 @@ const EXPORT_ENV = {
 
 const main = async (): Promise<void> => {
   Object.assign(process.env, { ...EXPORT_ENV, ...process.env });
-  const app = await NestFactory.create(AppModule, { logger: false, abortOnError: false });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    logger: false,
+    abortOnError: false,
+  });
   configureApp(app, app.get<AppConfig>(APP_CONFIG));
 
   writeFileSync(

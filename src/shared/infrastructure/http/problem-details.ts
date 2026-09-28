@@ -17,6 +17,8 @@ const FALLBACK_TITLE = 'Error';
 // Framework messages may echo request data (URL query, body fragments), so they are never exposed.
 const CLIENT_ERROR_DETAILS: Readonly<Partial<Record<number, string>>> = {
   [HttpStatus.NOT_FOUND]: 'The requested resource does not exist.',
+  [HttpStatus.PAYLOAD_TOO_LARGE]: 'The request body is too large.',
+  [HttpStatus.UNSUPPORTED_MEDIA_TYPE]: 'The request body must be JSON (application/json).',
 };
 const FALLBACK_CLIENT_ERROR_DETAIL = 'The request could not be processed.';
 
@@ -48,6 +50,24 @@ const typeFor = (code: string): string =>
   `${PROBLEM_TYPE_BASE_PATH}/${code.toLowerCase().replaceAll('_', '-')}`;
 
 const isServerError = (status: number): boolean => status >= 500;
+
+/**
+ * Status of a client error thrown before Nest routes the request: an HttpException, or an
+ * `http-errors` error of the body parser (e.g. 413) that is safe to expose.
+ */
+const clientErrorStatus = (exception: unknown): number | undefined => {
+  if (exception instanceof HttpException) {
+    const status = exception.getStatus();
+    return isServerError(status) ? undefined : status;
+  }
+  if (typeof exception !== 'object' || exception === null) {
+    return undefined;
+  }
+  const { status, expose } = exception as { status?: unknown; expose?: unknown };
+  return typeof status === 'number' && expose === true && !isServerError(status)
+    ? status
+    : undefined;
+};
 
 const internalError = (context: ProblemContext): ProblemDetails => ({
   type: typeFor(INTERNAL_ERROR_CODE),
@@ -90,11 +110,11 @@ export const toProblemDetails = (exception: unknown, context: ProblemContext): P
     return fromDomainError(exception, context);
   }
 
-  if (!(exception instanceof HttpException) || isServerError(exception.getStatus())) {
+  const status = clientErrorStatus(exception);
+  if (status === undefined) {
     return internalError(context);
   }
 
-  const status = exception.getStatus();
   const code = codeFor(status);
 
   return {

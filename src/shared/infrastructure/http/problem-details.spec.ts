@@ -108,16 +108,31 @@ describe('toProblemDetails', () => {
   });
 
   it.each([
-    [new BadRequestException(), 400, 'BAD_REQUEST'],
-    [new PayloadTooLargeException(), 413, 'PAYLOAD_TOO_LARGE'],
-    [new UnsupportedMediaTypeException(), 415, 'UNSUPPORTED_MEDIA_TYPE'],
-  ])('keeps the status of client errors (%#)', (exception, status, code) => {
+    [new BadRequestException(), 400, 'BAD_REQUEST', 'The request could not be processed.'],
+    [new PayloadTooLargeException(), 413, 'PAYLOAD_TOO_LARGE', 'The request body is too large.'],
+    [
+      new UnsupportedMediaTypeException(),
+      415,
+      'UNSUPPORTED_MEDIA_TYPE',
+      'The request body must be JSON (application/json).',
+    ],
+  ])('keeps the status of client errors (%#)', (exception, status, code, detail) => {
     const problem = toProblemDetails(exception, context);
 
-    expect(problem).toMatchObject({
-      status,
-      code,
-      detail: 'The request could not be processed.',
+    expect(problem).toMatchObject({ status, code, detail });
+  });
+
+  it('keeps the status of exposable body parser errors', () => {
+    const tooLarge = Object.assign(new Error('request entity too large'), {
+      status: 413,
+      expose: true,
+      type: 'entity.too.large',
+    });
+
+    expect(toProblemDetails(tooLarge, context)).toMatchObject({
+      status: 413,
+      code: 'PAYLOAD_TOO_LARGE',
+      detail: 'The request body is too large.',
     });
   });
 
@@ -140,6 +155,9 @@ describe('toProblemDetails', () => {
     ['an unexpected error', new Error('db-password=hunter2')],
     ['a thrown non-error value', 'boom'],
     ['a server HTTP exception', new ServiceUnavailableException('internal host 10.0.0.5 is down')],
+    ['a client status that is not safe to expose', Object.assign(new Error('x'), { status: 400 })],
+    ['an exposable server status', Object.assign(new Error('x'), { status: 502, expose: true })],
+    ['a null value', null],
   ])('hides %s behind a generic 500 problem', (_case, exception) => {
     const problem = toProblemDetails(exception, context);
 
