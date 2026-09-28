@@ -10,6 +10,28 @@ API serverless en NestJS con arquitectura hexagonal y Railway Oriented Programmi
 
 > Proyecto en construcción. Este README se completa a medida que avanza la implementación.
 
+## Estado de la entrega
+
+- **API en producción:** https://d7vch0fsx8645.cloudfront.net/api/v1 (health en `/api/v1/health`). **Swagger UI:** https://d7vch0fsx8645.cloudfront.net/api-docs/index.html. El contrato versionado está en `docs/openapi.json`.
+- **Publicado en producción (`v0.2.0`):** catálogo y stock, cobertura DIVIPOLA, cotización (tarifa de servicio + envío por zona y peso + envío gratis) y clientes con idempotencia (`Idempotency-Key`) y datos enmascarados.
+- **Implementado en `develop`:**
+  - transacciones con reserva de stock atómica (DynamoDB `TransactWriteItems`);
+  - cancelación;
+  - integración con la pasarela de pagos (tokens de aceptación, firma de integridad, pago y consulta);
+  - procesamiento del pago con asignación de la entrega;
+  - endurecimiento HTTP (helmet, límite de 16 KB, 415).
+- **Credenciales del sandbox:**
+  - probadas contra la pasarela: 4242 → `APPROVED`, 4111 → `DECLINED`;
+  - las llaves privadas viven en AWS SSM (SecureString), nunca en el repositorio.
+- **Pendiente:**
+  - endpoint `POST /transactions/{id}/payment`;
+  - webhook y conciliación programada;
+  - variables de la pasarela en la Lambda y release `v0.3.0`.
+- **Calidad:**
+  - 626 pruebas (unitarias y HTTP): ~99 % de statements, ~91 % de ramas;
+  - reglas hexagonales verificadas con dependency-cruiser;
+  - smoke tests del bundle de Lambda.
+
 ## Stack
 
 | Componente   | Elección                               |
