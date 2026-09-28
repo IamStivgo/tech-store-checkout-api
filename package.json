@@ -1,6 +1,6 @@
 {
   "name": "tech-store-checkout-api",
-  "version": "0.4.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Checkout API for a tech accessories store: catalog, delivery pricing, customers, transactions and card payments.",
   "license": "UNLICENSED",
