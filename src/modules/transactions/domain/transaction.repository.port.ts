@@ -6,6 +6,7 @@ import type { PaymentAlreadySubmittedError } from './transaction.errors';
 
 export interface TransactionRepository {
   findById(id: string): ResultAsync<Transaction | null, PersistenceError>;
+  findByReference(reference: string): ResultAsync<Transaction | null, PersistenceError>;
   /** The oldest PENDING transactions (sparse pending-index), at most `limit`. */
   findPending(limit: number): ResultAsync<Transaction[], PersistenceError>;
   /**

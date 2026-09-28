@@ -1026,6 +1026,59 @@
           "Transactions"
         ]
       }
+    },
+    "/api/v1/webhooks/payment-events": {
+      "post": {
+        "description": "Verified with the events checksum; events of another environment or unknown references are acknowledged and ignored.",
+        "operationId": "paymentEventsReceive",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentEventAck"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Receive a payment event from the payment provider",
+        "tags": [
+          "Webhooks"
+        ]
+      }
     }
   },
   "info": {
@@ -2107,6 +2160,81 @@
         },
         "required": [
           "status"
+        ]
+      },
+      "PaymentEventSignature": {
+        "type": "object",
+        "properties": {
+          "properties": {
+            "example": [
+              "transaction.id",
+              "transaction.status",
+              "transaction.amount_in_cents"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "checksum": {
+            "type": "string",
+            "description": "SHA-256 of the signed values, the timestamp and the events secret."
+          }
+        },
+        "required": [
+          "properties",
+          "checksum"
+        ]
+      },
+      "PaymentEvent": {
+        "type": "object",
+        "properties": {
+          "event": {
+            "type": "string",
+            "example": "transaction.updated"
+          },
+          "data": {
+            "type": "object",
+            "description": "Event data, e.g. `{ transaction: { id, reference, status, ... } }`."
+          },
+          "environment": {
+            "type": "string",
+            "example": "test"
+          },
+          "signature": {
+            "$ref": "#/components/schemas/PaymentEventSignature"
+          },
+          "timestamp": {
+            "type": "number",
+            "example": 1790566893
+          }
+        },
+        "required": [
+          "event",
+          "data",
+          "environment",
+          "signature",
+          "timestamp"
+        ]
+      },
+      "PaymentEventAck": {
+        "type": "object",
+        "properties": {
+          "received": {
+            "type": "boolean",
+            "example": true
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "applied",
+              "ignored"
+            ]
+          }
+        },
+        "required": [
+          "received",
+          "outcome"
         ]
       }
     }

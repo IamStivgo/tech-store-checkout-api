@@ -28,11 +28,13 @@ import { ApplyPaymentResult } from '../application/apply-payment-result.use-case
 import { CancelTransaction } from '../application/cancel-transaction.use-case';
 import { CreateTransaction } from '../application/create-transaction.use-case';
 import { GetTransaction } from '../application/get-transaction.use-case';
+import { HandlePaymentEvent } from '../application/handle-payment-event.use-case';
 import { ProcessPayment } from '../application/process-payment.use-case';
 import { ReconcileTransactions } from '../application/reconcile-transactions.use-case';
 import type { CheckoutUnitOfWork } from '../domain/checkout-unit-of-work.port';
 import type { TransactionRepository } from '../domain/transaction.repository.port';
 
+import { PaymentEventsController } from './http/payment-events.controller';
 import { TransactionsController } from './http/transactions.controller';
 import { DynamoDbCheckoutUnitOfWork } from './persistence/dynamodb-checkout-unit-of-work';
 import { DynamoDbTransactionRepository } from './persistence/dynamodb-transaction.repository';
@@ -48,7 +50,7 @@ const TRANSACTION_SYNC_INTERVAL_MS = 2000;
 
 @Module({
   imports: [ProductsModule, CustomersModule, CoverageModule, PricingModule, PaymentsModule],
-  controllers: [TransactionsController],
+  controllers: [TransactionsController, PaymentEventsController],
   providers: [
     {
       provide: TRANSACTION_REPOSITORY,
@@ -168,6 +170,15 @@ const TRANSACTION_SYNC_INTERVAL_MS = 2000;
           sleeper,
           pollDelaysMs: PAYMENT_POLL_DELAYS_MS,
         }),
+    },
+    {
+      provide: HandlePaymentEvent,
+      inject: [TRANSACTION_REPOSITORY, PAYMENT_GATEWAY, ApplyPaymentResult],
+      useFactory: (
+        transactions: TransactionRepository,
+        gateway: PaymentGateway,
+        applyResult: ApplyPaymentResult,
+      ) => new HandlePaymentEvent(transactions, gateway, applyResult),
     },
     {
       provide: ReconcileTransactions,

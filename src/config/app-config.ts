@@ -69,6 +69,10 @@ const appConfigSchema = dynamoDbConnectionSchema
     PAYMENT_PRIVATE_KEY: z.string().trim().min(1).optional(),
     PAYMENT_INTEGRITY_SECRET_PARAM: z.string().trim().min(1).optional(),
     PAYMENT_INTEGRITY_SECRET: z.string().trim().min(1).optional(),
+    PAYMENT_EVENTS_SECRET_PARAM: z.string().trim().min(1).optional(),
+    PAYMENT_EVENTS_SECRET: z.string().trim().min(1).optional(),
+    // Events of the other environment (sandbox `test` or real `prod`) are ignored.
+    PAYMENT_EVENTS_ENVIRONMENT: z.enum(['test', 'prod']).default('test'),
     PAYMENT_HTTP_TIMEOUT_MS: z.coerce.number().int().min(1).default(DEFAULT_PAYMENT_TIMEOUT_MS),
   })
   .superRefine((env, context) => {
@@ -93,6 +97,9 @@ const appConfigSchema = dynamoDbConnectionSchema
     if (!env.PAYMENT_INTEGRITY_SECRET_PARAM && !env.PAYMENT_INTEGRITY_SECRET) {
       addIssue('PAYMENT_INTEGRITY_SECRET_PARAM', 'set it or PAYMENT_INTEGRITY_SECRET');
     }
+    if (!env.PAYMENT_EVENTS_SECRET_PARAM && !env.PAYMENT_EVENTS_SECRET) {
+      addIssue('PAYMENT_EVENTS_SECRET_PARAM', 'set it or PAYMENT_EVENTS_SECRET');
+    }
   });
 
 export type AppEnv = (typeof APP_ENVS)[number];
@@ -115,6 +122,8 @@ export type PaymentsConfig =
       readonly publicKey: string;
       readonly privateKey: SecretSource;
       readonly integritySecret: SecretSource;
+      readonly eventsSecret: SecretSource;
+      readonly eventsEnvironment: 'test' | 'prod';
       readonly timeoutMs: number;
     };
 
@@ -180,6 +189,11 @@ const toPaymentsConfig = (config: z.infer<typeof appConfigSchema>): PaymentsConf
           config.PAYMENT_INTEGRITY_SECRET_PARAM,
           config.PAYMENT_INTEGRITY_SECRET,
         ),
+        eventsSecret: secretSource(
+          config.PAYMENT_EVENTS_SECRET_PARAM,
+          config.PAYMENT_EVENTS_SECRET,
+        ),
+        eventsEnvironment: config.PAYMENT_EVENTS_ENVIRONMENT,
         timeoutMs: config.PAYMENT_HTTP_TIMEOUT_MS,
       };
 

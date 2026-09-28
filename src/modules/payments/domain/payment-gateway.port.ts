@@ -1,8 +1,8 @@
-import type { ResultAsync } from '../../../shared/domain/result';
+import type { Result, ResultAsync } from '../../../shared/domain/result';
 
 import type { AcceptanceTokens } from './acceptance-tokens';
 import type { CardPaymentRequest } from './card-payment-request';
-import type { PaymentGatewayError } from './payment-gateway.errors';
+import type { InvalidEventSignatureError, PaymentGatewayError } from './payment-gateway.errors';
 import type { ProviderPayment } from './provider-payment';
 
 export interface PaymentGateway {
@@ -15,4 +15,9 @@ export interface PaymentGateway {
   findPaymentByReference(
     reference: string,
   ): ResultAsync<ProviderPayment | null, PaymentGatewayError>;
+  /**
+   * Verifies a payment event sent by the provider (webhook). Null when it is valid but not about
+   * a payment of this environment, so it is acknowledged and ignored.
+   */
+  parsePaymentEvent(event: unknown): Result<ProviderPayment | null, InvalidEventSignatureError>;
 }

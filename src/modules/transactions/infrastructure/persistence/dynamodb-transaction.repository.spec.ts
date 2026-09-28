@@ -51,6 +51,27 @@ describe('DynamoDbTransactionRepository', () => {
     expect(result.isErr && result.error.operation).toBe('transactions.findById');
   });
 
+  it('finds a transaction by its reference', async () => {
+    dynamo.on(QueryCommand).resolves({ Items: [toTransactionItem(aTransaction())] });
+
+    expect(unwrap(await repository.findByReference('CKT-20260924-7K3M9Q2PXA'))?.id).toBe(
+      TRANSACTION_ID,
+    );
+    expect(dynamo.commandCalls(QueryCommand)[0]?.args[0].input).toMatchObject({
+      IndexName: 'reference-index',
+      ExpressionAttributeValues: { ':reference': 'CKT-20260924-7K3M9Q2PXA' },
+      Limit: 1,
+    });
+  });
+
+  it('returns null for an unknown reference and reports a failed lookup', async () => {
+    dynamo.on(QueryCommand).resolvesOnce({ Items: [] }).rejectsOnce(new Error('throttled'));
+
+    expect(unwrap(await repository.findByReference('CKT-X'))).toBeNull();
+    const failed = await repository.findByReference('CKT-X');
+    expect(failed.isErr && failed.error.operation).toBe('transactions.findByReference');
+  });
+
   it('reads the oldest pending transactions from the sparse pending index', async () => {
     dynamo.on(QueryCommand).resolves({ Items: [toTransactionItem(aTransaction())] });
 

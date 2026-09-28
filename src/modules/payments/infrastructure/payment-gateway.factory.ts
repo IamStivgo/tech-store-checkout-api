@@ -20,6 +20,7 @@ export const createPaymentGateway = async (
   const secrets = await readSecrets(ssm, {
     privateKey: payments.privateKey,
     integritySecret: payments.integritySecret,
+    eventsSecret: payments.eventsSecret,
   });
   return new HttpPaymentGateway({
     baseUrl: payments.apiBaseUrl.replace(/\/$/, ''),
@@ -27,5 +28,6 @@ export const createPaymentGateway = async (
     privateKey: secrets.privateKey,
     integritySecret: secrets.integritySecret,
     timeoutMs: payments.timeoutMs,
+    events: { secret: secrets.eventsSecret, environment: payments.eventsEnvironment },
   });
 };
