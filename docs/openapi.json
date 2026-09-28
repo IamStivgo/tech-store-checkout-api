@@ -1209,7 +1209,7 @@
   "info": {
     "title": "Tech Store Checkout API",
     "description": "Catalog, delivery coverage and checkout of a tech accessories store. Errors follow RFC 9457 Problem Details.",
-    "version": "0.4.0",
+    "version": "1.0.0",
     "contact": {}
   },
   "tags": [],
