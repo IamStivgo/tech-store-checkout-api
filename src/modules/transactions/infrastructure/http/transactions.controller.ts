@@ -99,7 +99,11 @@ export class TransactionsController {
 
   @Get(':transactionId')
   @Header('Cache-Control', 'no-store')
-  @ApiOperation({ summary: 'Get the current state of a transaction' })
+  @ApiOperation({
+    summary: 'Get the current state of a transaction',
+    description:
+      'While the payment is PENDING, the payment provider is asked for the result (at most once every 2 s).',
+  })
   @ApiParam(TRANSACTION_ID_PARAM)
   @ApiOkResponse({ type: TransactionSchema })
   @ApiProblemResponses(HttpStatus.BAD_REQUEST, HttpStatus.NOT_FOUND)
