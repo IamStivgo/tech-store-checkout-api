@@ -35,11 +35,12 @@ export class FakePaymentGateway implements PaymentGateway {
     this.issuedTokens += 1;
     return okAsync({
       endUserPolicy: {
-        token: `fake-end-user-policy-${this.issuedTokens}`,
+        // JWT-shaped, like the provider's tokens, so they pass the API validation.
+        token: `fake.endUserPolicy.${this.issuedTokens}`,
         permalink: `${FAKE_DOCUMENTS_URL}/terms.pdf`,
       },
       personalDataAuth: {
-        token: `fake-personal-data-auth-${this.issuedTokens}`,
+        token: `fake.personalDataAuth.${this.issuedTokens}`,
         permalink: `${FAKE_DOCUMENTS_URL}/personal-data.pdf`,
       },
     });

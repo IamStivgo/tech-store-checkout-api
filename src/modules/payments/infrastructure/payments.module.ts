@@ -23,5 +23,6 @@ import { PAYMENT_GATEWAY } from './payment-gateway.token';
       useFactory: (gateway: PaymentGateway) => new GetAcceptanceTokens(gateway),
     },
   ],
+  exports: [PAYMENT_GATEWAY],
 })
 export class PaymentsModule {}

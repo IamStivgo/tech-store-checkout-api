@@ -27,7 +27,7 @@ export const IDEMPOTENCY_KEY_HEADER = 'Idempotency-Key';
 export const IDEMPOTENT_REPLAYED_HEADER = 'Idempotent-Replayed';
 
 // Response headers that are part of the result and must be repeated by a replay.
-const REPLAYED_RESPONSE_HEADERS = ['Location'] as const;
+const REPLAYED_RESPONSE_HEADERS = ['Location', 'Retry-After'] as const;
 
 const MIN_ERROR_STATUS = 400;
 const MIN_SERVER_ERROR_STATUS = 500;

@@ -11,6 +11,7 @@ import {
   Res,
 } from '@nestjs/common';
 import {
+  ApiAcceptedResponse,
   ApiBody,
   ApiConsumes,
   ApiCreatedResponse,
@@ -32,10 +33,16 @@ import { toHttpResponse } from '../../../../shared/infrastructure/http/to-http-r
 import { CancelTransaction } from '../../application/cancel-transaction.use-case';
 import { CreateTransaction } from '../../application/create-transaction.use-case';
 import { GetTransaction } from '../../application/get-transaction.use-case';
+import { ProcessPayment } from '../../application/process-payment.use-case';
 
-import { parseCreateTransactionBody, parseUpdateTransactionBody } from './transaction-requests';
+import {
+  parseCreateTransactionBody,
+  parsePayTransactionBody,
+  parseUpdateTransactionBody,
+} from './transaction-requests';
 import {
   CreateTransactionRequestSchema,
+  PayTransactionRequestSchema,
   TransactionSchema,
   UpdateTransactionRequestSchema,
 } from './transaction.openapi';
@@ -43,6 +50,8 @@ import { toTransactionResponse, type TransactionResponse } from './transaction.r
 
 const RESOURCE_PATH = `/${GLOBAL_PREFIX}/v${DEFAULT_API_VERSION}/transactions`;
 const TRANSACTION_ID_PARAM = { name: 'transactionId', format: 'uuid' } as const;
+/** Seconds after which a client asks again about a payment still PENDING. */
+const PENDING_RETRY_AFTER_SECONDS = '2';
 
 @ApiTags('Transactions')
 @ApiProblemResponses(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -52,6 +61,7 @@ export class TransactionsController {
     private readonly createTransaction: CreateTransaction,
     private readonly getTransaction: GetTransaction,
     private readonly cancelTransaction: CancelTransaction,
+    private readonly processPayment: ProcessPayment,
   ) {}
 
   @Post()
@@ -97,6 +107,57 @@ export class TransactionsController {
     @Param('transactionId', parseUuidParam('transactionId')) transactionId: string,
   ): Promise<TransactionResponse> {
     return toTransactionResponse(await toHttpResponse(this.getTransaction.execute(transactionId)));
+  }
+
+  @Post(':transactionId/payment')
+  @Idempotent()
+  @Header('Cache-Control', 'no-store')
+  @ApiOperation({
+    summary: 'Pay the transaction with a tokenized card and wait a few seconds for the result',
+    description:
+      'Answers 200 with a final status, or 202 while the payment is still PENDING (follow Location after Retry-After).',
+  })
+  @ApiParam(TRANSACTION_ID_PARAM)
+  @ApiBody({ type: PayTransactionRequestSchema })
+  @ApiOkResponse({ type: TransactionSchema, description: 'Final status.' })
+  @ApiAcceptedResponse({
+    type: TransactionSchema,
+    description: 'Still PENDING.',
+    headers: {
+      Location: { description: 'URL to poll.', schema: { type: 'string' } },
+      'Retry-After': { description: 'Seconds to wait.', schema: { type: 'integer' } },
+    },
+  })
+  @ApiProblemResponses(
+    HttpStatus.BAD_REQUEST,
+    HttpStatus.NOT_FOUND,
+    HttpStatus.CONFLICT,
+    HttpStatus.UNPROCESSABLE_ENTITY,
+    HttpStatus.BAD_GATEWAY,
+    HttpStatus.GATEWAY_TIMEOUT,
+  )
+  async pay(
+    @Param('transactionId', parseUuidParam('transactionId')) transactionId: string,
+    @Body() body: unknown,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<TransactionResponse> {
+    const transaction = toTransactionResponse(
+      await toHttpResponse(
+        this.processPayment.execute(parsePayTransactionBody(transactionId, body)),
+        {
+          CUSTOMER_NOT_FOUND: HttpStatus.UNPROCESSABLE_ENTITY,
+        },
+      ),
+    );
+    if (transaction.status === 'PENDING') {
+      response
+        .status(HttpStatus.ACCEPTED)
+        .location(`${RESOURCE_PATH}/${transaction.id}`)
+        .setHeader('Retry-After', PENDING_RETRY_AFTER_SECONDS);
+    } else {
+      response.status(HttpStatus.OK);
+    }
+    return transaction;
   }
 
   @Patch(':transactionId')

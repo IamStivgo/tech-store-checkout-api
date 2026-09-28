@@ -33,6 +33,7 @@ describe('OpenAPI contract', () => {
       '/api/v1/products/{productId}/stock',
       '/api/v1/transactions',
       '/api/v1/transactions/{transactionId}',
+      '/api/v1/transactions/{transactionId}/payment',
     ]);
   });
 
@@ -54,6 +55,7 @@ describe('OpenAPI contract', () => {
       'productsStock',
       'transactionsCreate',
       'transactionsDetail',
+      'transactionsPay',
       'transactionsUpdate',
     ]);
   });

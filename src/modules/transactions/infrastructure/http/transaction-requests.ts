@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { DomainHttpException } from '../../../../shared/infrastructure/http/domain-http.exception';
 import { toValidationError } from '../../../../shared/infrastructure/http/zod-validation-error';
 import type { CreateTransactionCommand } from '../../application/create-transaction.use-case';
+import type { ProcessPaymentCommand } from '../../application/process-payment.use-case';
 
 const requiredText = (field: string) =>
   z.string({
@@ -44,6 +45,32 @@ const updateTransactionSchema = z.strictObject(
   { error: 'the request body must be a JSON object' },
 );
 
+const MAX_TOKEN_LENGTH = 4096;
+const JWT = /^[\w-]+\.[\w-]+\.[\w-]+$/;
+
+const payTransactionSchema = z.strictObject(
+  {
+    cardToken: z
+      .string({ error: 'cardToken is required' })
+      .max(100, { error: 'cardToken must be a card token' })
+      .regex(/^tok_\w+$/, { error: 'cardToken must be a card token' }),
+    installments: z
+      .number({ error: 'installments must be a whole number from 1 to 36' })
+      .int({ error: 'installments must be a whole number from 1 to 36' })
+      .min(1, { error: 'installments must be a whole number from 1 to 36' })
+      .max(36, { error: 'installments must be a whole number from 1 to 36' }),
+    acceptanceToken: z
+      .string({ error: 'acceptanceToken is required' })
+      .max(MAX_TOKEN_LENGTH, { error: 'acceptanceToken must be a signed token' })
+      .regex(JWT, { error: 'acceptanceToken must be a signed token' }),
+    personalDataAuthToken: z
+      .string({ error: 'personalDataAuthToken is required' })
+      .max(MAX_TOKEN_LENGTH, { error: 'personalDataAuthToken must be a signed token' })
+      .regex(JWT, { error: 'personalDataAuthToken must be a signed token' }),
+  },
+  { error: 'the request body must be a JSON object' },
+);
+
 const parse = <T>(schema: z.ZodType<T>, body: unknown): T => {
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
@@ -58,3 +85,8 @@ export const parseCreateTransactionBody = (body: unknown): CreateTransactionComm
 export const parseUpdateTransactionBody = (body: unknown): void => {
   parse(updateTransactionSchema, body);
 };
+
+export const parsePayTransactionBody = (
+  transactionId: string,
+  body: unknown,
+): ProcessPaymentCommand => ({ transactionId, ...parse(payTransactionSchema, body) });
