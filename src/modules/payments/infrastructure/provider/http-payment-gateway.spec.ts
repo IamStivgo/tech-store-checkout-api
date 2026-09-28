@@ -109,6 +109,42 @@ describe('HttpPaymentGateway', () => {
     });
   });
 
+  describe('getTokenizationKey', () => {
+    const KEY = { data: { publicKey: '-----BEGIN PUBLIC KEY----- abc -----END PUBLIC KEY-----' } };
+
+    it('downloads the key with the public key and keeps it for an hour', async () => {
+      const fetchMock = jest.fn<Promise<Response>, Parameters<typeof fetch>>();
+      let now = 0;
+      const gateway = new HttpPaymentGateway(OPTIONS, fetchMock, () => now);
+      fetchMock.mockResolvedValueOnce(json(KEY)).mockResolvedValueOnce(json(KEY));
+
+      expect(unwrap(await gateway.getTokenizationKey())).toBe(KEY.data.publicKey);
+      now = 3_599_999;
+      await gateway.getTokenizationKey();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      now = 3_600_000;
+      await gateway.getTokenizationKey();
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      const { url, headers } = call(fetchMock);
+      expect(url).toBe(`${BASE_URL}/tokens/keys/tokenization`);
+      expect(headers.Authorization).toBe('Bearer pub_test_key');
+    });
+
+    it('does not keep a failed download', async () => {
+      const { fetchMock, gateway } = setup();
+      fetchMock
+        .mockResolvedValueOnce(json({}, 503))
+        .mockResolvedValueOnce(json({}, 503))
+        .mockResolvedValueOnce(json(KEY));
+
+      expect(await failureOf(gateway.getTokenizationKey())).toMatchObject({
+        code: 'PAYMENT_PROVIDER_UNAVAILABLE',
+      });
+      expect(unwrap(await gateway.getTokenizationKey())).toBe(KEY.data.publicKey);
+    });
+  });
+
   describe('createCardPayment', () => {
     it('sends the signed payment with the private key and maps the pending transaction', async () => {
       const { fetchMock, gateway } = setup();

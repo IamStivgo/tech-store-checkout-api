@@ -11,6 +11,7 @@ import type { ProviderPayment, ProviderPaymentStatus } from '../../domain/provid
 export const FAKE_APPROVED_TOKEN_PREFIX = 'tok_fake_approved_';
 export const FAKE_DECLINED_TOKEN_PREFIX = 'tok_fake_declined_';
 const FAKE_DOCUMENTS_URL = 'https://example.com/legal';
+const FAKE_TOKENIZATION_KEY = '-----BEGIN PUBLIC KEY----- fake -----END PUBLIC KEY-----';
 
 const outcomeFor = (cardToken: string): ProviderPaymentStatus => {
   if (cardToken.startsWith(FAKE_APPROVED_TOKEN_PREFIX)) {
@@ -30,6 +31,11 @@ export class FakePaymentGateway implements PaymentGateway {
     { readonly payment: ProviderPayment; readonly outcome: ProviderPaymentStatus }
   >();
   private issuedTokens = 0;
+
+  // Only the JWE tokenizer uses it, and never against the fake gateway (ADR-011).
+  getTokenizationKey(): ResultAsync<string, PaymentGatewayError> {
+    return okAsync(FAKE_TOKENIZATION_KEY);
+  }
 
   getAcceptanceTokens(): ResultAsync<AcceptanceTokens, PaymentGatewayError> {
     this.issuedTokens += 1;
