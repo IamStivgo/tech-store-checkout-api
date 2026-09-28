@@ -1,5 +1,7 @@
 import {
   InsufficientStockError,
+  PaymentAlreadySubmittedError,
+  TransactionNotPayableError,
   TransactionNotCancellableError,
   TransactionNotFoundError,
 } from './transaction.errors';
@@ -13,5 +15,9 @@ describe('transaction errors', () => {
       detail: 'Only 2 units are available for this product.',
       context: { availableUnits: 2 },
     });
+    expect(new TransactionNotPayableError('FINAL', 'APPROVED').code).toBe(
+      'TRANSACTION_NOT_PAYABLE',
+    );
+    expect(new PaymentAlreadySubmittedError().code).toBe('PAYMENT_ALREADY_SUBMITTED');
   });
 });

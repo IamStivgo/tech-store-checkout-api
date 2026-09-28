@@ -6,6 +6,7 @@ import {
 import { DynamoDBDocumentClient, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 import { mockClient } from 'aws-sdk-client-mock';
 
+import { aProviderPayment } from '../../../../../test/builders/provider-payment.builder';
 import {
   aStoredTransaction,
   aTransaction,
@@ -13,10 +14,15 @@ import {
   TRANSACTION_ID,
 } from '../../../../../test/builders/transaction.builder';
 import { unwrap } from '../../../../../test/builders/unwrap';
+import { Delivery } from '../../../deliveries/domain/delivery.entity';
 
 import { DynamoDbCheckoutUnitOfWork } from './dynamodb-checkout-unit-of-work';
 
-const TABLES = { products: 'test-products', transactions: 'test-transactions' };
+const TABLES = {
+  products: 'test-products',
+  transactions: 'test-transactions',
+  deliveries: 'test-deliveries',
+};
 const cancelled = (...reasons: CancellationReason[]) =>
   new TransactionCanceledException({
     message: 'Transaction cancelled',
@@ -104,6 +110,61 @@ describe('DynamoDbCheckoutUnitOfWork', () => {
       const result = await unitOfWork.reserveStockAndCreate(aTransaction());
 
       expect(result.isErr && result.error.code).toBe('INTERNAL_ERROR');
+    });
+  });
+
+  describe('approveAndAssignDelivery', () => {
+    const approve = () => {
+      const now = new Date('2026-09-24T20:16:03.000Z');
+      const claimed = aTransaction().claimPayment('attempt-1', 1, now);
+      const settlement = claimed.settle(aProviderPayment(), now, 'delivery-1');
+      if (settlement.kind !== 'settled') {
+        throw new Error('Expected a settled transaction');
+      }
+      const approved = settlement.transaction;
+      return { approved, delivery: Delivery.assignFor(approved, 'delivery-1', now) };
+    };
+
+    it('approves, turns the reserved units into sold ones and creates the delivery together', async () => {
+      dynamo.on(TransactWriteCommand).resolves({});
+      const { approved, delivery } = approve();
+
+      expect(unwrap(await unitOfWork.approveAndAssignDelivery(approved, delivery))).toBe('applied');
+
+      const [transaction, product, created] = items();
+      expect(transaction?.Update).toMatchObject({
+        ConditionExpression: '#status = :pending',
+        ExpressionAttributeValues: {
+          ':status': 'APPROVED',
+          ':deliveryId': 'delivery-1',
+          ':payment': { attemptId: 'attempt-1', providerStatus: 'APPROVED', cardLastFour: '4242' },
+        },
+      });
+      expect(transaction?.Update?.UpdateExpression).toContain(
+        'payment = :payment, deliveryId = :deliveryId',
+      );
+      expect(product?.Update?.UpdateExpression).toContain('stockSold = stockSold + :quantity');
+      expect(created?.Put).toMatchObject({
+        TableName: 'test-deliveries',
+        Item: {
+          deliveryId: 'delivery-1',
+          transactionId: TRANSACTION_ID,
+          status: 'ASSIGNED',
+          estimatedDeliveryDate: '2026-09-25',
+          deliveryFeeInCents: 800_000,
+          shippingAddress: { cityCode: '11001', addressLine2: 'Apto 501, Torre 2' },
+        },
+        ConditionExpression: 'attribute_not_exists(deliveryId)',
+      });
+    });
+
+    it('reports that another path already settled the transaction', async () => {
+      dynamo.on(TransactWriteCommand).rejects(cancelled({ Code: 'ConditionalCheckFailed' }));
+      const { approved, delivery } = approve();
+
+      expect(unwrap(await unitOfWork.approveAndAssignDelivery(approved, delivery))).toBe(
+        'already-final',
+      );
     });
   });
 

@@ -70,6 +70,11 @@ type Item = z.infer<typeof itemSchema>;
 
 const iso = (date: Date): string => date.toISOString();
 
+/** The payment map as stored, e.g. for the conditional updates of the payment claim. */
+export const toPaymentItem = (
+  payment: NonNullable<Transaction['payment']>,
+): Record<string, unknown> => ({ ...payment, submittedAt: iso(payment.submittedAt) });
+
 export const toTransactionItem = (transaction: Transaction): Record<string, unknown> => {
   const { product, shippingAddress: address, amounts, delivery, payment } = transaction;
   const pending = transaction.status === 'PENDING';
@@ -107,7 +112,7 @@ export const toTransactionItem = (transaction: Transaction): Record<string, unkn
     zoneCode: delivery.zone,
     billableWeightKg: delivery.billableWeightKg,
     estimatedBusinessDays: delivery.estimatedBusinessDays,
-    payment: payment ? { ...payment, submittedAt: iso(payment.submittedAt) } : undefined,
+    payment: payment ? toPaymentItem(payment) : undefined,
     deliveryId: transaction.deliveryId ?? undefined,
     reservationExpiresAt: iso(transaction.reservationExpiresAt),
     finalizedAt: transaction.finalizedAt ? iso(transaction.finalizedAt) : undefined,

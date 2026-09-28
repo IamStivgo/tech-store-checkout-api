@@ -21,6 +21,7 @@ const EXPORT_ENV = {
   TABLE_PRODUCTS: 'openapi-export',
   TABLE_CUSTOMERS: 'openapi-export',
   TABLE_TRANSACTIONS: 'openapi-export',
+  TABLE_DELIVERIES: 'openapi-export',
   TABLE_IDEMPOTENCY: 'openapi-export',
 };
 

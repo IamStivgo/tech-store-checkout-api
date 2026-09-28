@@ -3,10 +3,15 @@ import { err, ok, type Result } from '../../../shared/domain/result';
 import { ValidationError } from '../../../shared/domain/validation-error';
 import type { BusinessDaysRange } from '../../coverage/domain/delivery-zone.vo';
 import type { ZoneCode } from '../../coverage/domain/zone-code';
+import type { ProviderPayment } from '../../payments/domain/provider-payment';
 
 import type { ShippingAddress } from './shipping-address.vo';
 import { isFinalStatus, type TransactionStatus } from './transaction-status';
-import { TransactionNotCancellableError } from './transaction.errors';
+import {
+  PaymentAlreadySubmittedError,
+  TransactionNotCancellableError,
+  TransactionNotPayableError,
+} from './transaction.errors';
 
 /** Product data frozen at purchase time: later catalog changes never alter the order. */
 export interface ProductSnapshot {
@@ -65,7 +70,18 @@ export type NewTransactionProps = Omit<
   'status' | 'payment' | 'deliveryId' | 'finalizedAt' | 'updatedAt' | 'reservationExpiresAt'
 >;
 
+/** Outcome of applying a final provider result to the transaction. */
+export type Settlement =
+  | { readonly kind: 'already-final' }
+  | {
+      readonly kind: 'settled';
+      readonly transaction: Transaction;
+      /** The result names another reference or amount: a security alert, never trusted. */
+      readonly mismatch: boolean;
+    };
+
 const MS_PER_MINUTE = 60_000;
+const MISMATCH_MESSAGE = 'The payment result does not match the transaction';
 
 const addsUp = ({ productAmount, serviceFee, deliveryFee, total }: TransactionAmounts): boolean =>
   productAmount.add(serviceFee).add(deliveryFee).equals(total);
@@ -170,6 +186,91 @@ export class Transaction {
 
   isFinal(): boolean {
     return isFinalStatus(this.props.status);
+  }
+
+  /** Only a PENDING transaction with no payment sent and its stock still reserved can be paid. */
+  ensurePayable(
+    now: Date,
+  ): Result<Transaction, TransactionNotPayableError | PaymentAlreadySubmittedError> {
+    if (this.props.status !== 'PENDING') {
+      return err(new TransactionNotPayableError('FINAL', this.props.status));
+    }
+    if (this.props.payment) {
+      return err(new PaymentAlreadySubmittedError());
+    }
+    if (this.props.reservationExpiresAt <= now) {
+      return err(new TransactionNotPayableError('RESERVATION_EXPIRED', this.props.status));
+    }
+    return ok(this);
+  }
+
+  /** Marks the payment as sent by this attempt, before calling the provider. */
+  claimPayment(attemptId: string, installments: number, now: Date): Transaction {
+    return new Transaction({
+      ...this.props,
+      payment: {
+        attemptId,
+        submittedAt: now,
+        installments,
+        providerTransactionId: null,
+        providerStatus: null,
+        statusMessage: null,
+        cardBrand: null,
+        cardLastFour: null,
+      },
+      updatedAt: now,
+    });
+  }
+
+  /** Keeps what the provider reports about the payment of the claimed attempt. */
+  withProviderPayment(payment: ProviderPayment, now: Date): Transaction {
+    const current = this.props.payment;
+    if (!current) {
+      return this;
+    }
+    return new Transaction({
+      ...this.props,
+      payment: {
+        ...current,
+        providerTransactionId: payment.providerTransactionId,
+        providerStatus: payment.status,
+        statusMessage: payment.statusMessage,
+        cardBrand: payment.cardBrand,
+        cardLastFour: payment.cardLastFour,
+      },
+      updatedAt: now,
+    });
+  }
+
+  /**
+   * Applies a final provider result: its status becomes the transaction's. A result for another
+   * reference or amount turns the transaction into ERROR instead (payment flow §3.1).
+   */
+  settle(payment: ProviderPayment, now: Date, deliveryId: string): Settlement {
+    if (this.props.status !== 'PENDING') {
+      return { kind: 'already-final' };
+    }
+    const mismatch =
+      payment.reference !== this.props.reference ||
+      !payment.amount.equals(this.props.amounts.total);
+    const status = mismatch ? 'ERROR' : payment.status;
+    const { payment: recorded } = this.withProviderPayment(payment, now).props;
+
+    return {
+      kind: 'settled',
+      mismatch,
+      transaction: new Transaction({
+        ...this.props,
+        status,
+        payment: recorded && {
+          ...recorded,
+          statusMessage: mismatch ? MISMATCH_MESSAGE : payment.statusMessage,
+        },
+        deliveryId: status === 'APPROVED' ? deliveryId : null,
+        finalizedAt: now,
+        updatedAt: now,
+      }),
+    };
   }
 
   /** The buyer gives up before paying: only a PENDING order without a sent payment. */

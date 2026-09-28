@@ -18,6 +18,7 @@ Object.assign(process.env, {
   TABLE_PRODUCTS: 'checkout-app-test-products',
   TABLE_CUSTOMERS: 'checkout-app-test-customers',
   TABLE_TRANSACTIONS: 'checkout-app-test-transactions',
+  TABLE_DELIVERIES: 'checkout-app-test-deliveries',
   TABLE_IDEMPOTENCY: 'checkout-app-test-idempotency-keys',
 });
 

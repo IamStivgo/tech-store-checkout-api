@@ -1,5 +1,6 @@
 import type { PersistenceError } from '../../../shared/domain/persistence-error';
 import type { ResultAsync } from '../../../shared/domain/result';
+import type { Delivery } from '../../deliveries/domain/delivery.entity';
 import type { ProductNotFoundError } from '../../products/domain/product.errors';
 
 import type { Transaction } from './transaction.entity';
@@ -14,6 +15,11 @@ export interface CheckoutUnitOfWork {
   reserveStockAndCreate(
     transaction: Transaction,
   ): ResultAsync<void, InsufficientStockError | ProductNotFoundError | PersistenceError>;
+  /** Stores the APPROVED transaction, turns its reserved units into sold ones and creates the delivery. */
+  approveAndAssignDelivery(
+    transaction: Transaction,
+    delivery: Delivery,
+  ): ResultAsync<ApplyOutcome, PersistenceError>;
   /** Stores a final, non-approved transaction and returns its reserved units to stock. */
   closeAndReleaseStock(transaction: Transaction): ResultAsync<ApplyOutcome, PersistenceError>;
 }
