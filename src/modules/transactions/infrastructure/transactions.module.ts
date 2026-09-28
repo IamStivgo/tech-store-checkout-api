@@ -28,10 +28,13 @@ import { ApplyPaymentResult } from '../application/apply-payment-result.use-case
 import { CancelTransaction } from '../application/cancel-transaction.use-case';
 import { CreateTransaction } from '../application/create-transaction.use-case';
 import { GetTransaction } from '../application/get-transaction.use-case';
+import { HandlePaymentEvent } from '../application/handle-payment-event.use-case';
 import { ProcessPayment } from '../application/process-payment.use-case';
+import { ReconcileTransactions } from '../application/reconcile-transactions.use-case';
 import type { CheckoutUnitOfWork } from '../domain/checkout-unit-of-work.port';
 import type { TransactionRepository } from '../domain/transaction.repository.port';
 
+import { PaymentEventsController } from './http/payment-events.controller';
 import { TransactionsController } from './http/transactions.controller';
 import { DynamoDbCheckoutUnitOfWork } from './persistence/dynamodb-checkout-unit-of-work';
 import { DynamoDbTransactionRepository } from './persistence/dynamodb-transaction.repository';
@@ -39,10 +42,15 @@ import { CHECKOUT_UNIT_OF_WORK, TRANSACTION_REPOSITORY } from './transaction-tok
 
 // About 8 s of waiting for the final result before answering 202 (backend design §6.2).
 const PAYMENT_POLL_DELAYS_MS = [1000, 1500, 2000, 2500];
+// The scheduler runs every 5 minutes; each run reviews the oldest PENDING transactions.
+const RECONCILE_BATCH_SIZE = 50;
+const LOST_CLAIM_AFTER_MS = 10 * 60_000;
+// Reading a PENDING transaction asks the provider at most once every 2 s (T-045).
+const TRANSACTION_SYNC_INTERVAL_MS = 2000;
 
 @Module({
   imports: [ProductsModule, CustomersModule, CoverageModule, PricingModule, PaymentsModule],
-  controllers: [TransactionsController],
+  controllers: [TransactionsController, PaymentEventsController],
   providers: [
     {
       provide: TRANSACTION_REPOSITORY,
@@ -96,8 +104,19 @@ const PAYMENT_POLL_DELAYS_MS = [1000, 1500, 2000, 2500];
     },
     {
       provide: GetTransaction,
-      inject: [TRANSACTION_REPOSITORY],
-      useFactory: (transactions: TransactionRepository) => new GetTransaction(transactions),
+      inject: [TRANSACTION_REPOSITORY, PAYMENT_GATEWAY, ApplyPaymentResult, CLOCK],
+      useFactory: (
+        transactions: TransactionRepository,
+        gateway: PaymentGateway,
+        applyResult: ApplyPaymentResult,
+        clock: Clock,
+      ) =>
+        new GetTransaction(transactions, {
+          gateway,
+          applyResult,
+          clock,
+          minIntervalMs: TRANSACTION_SYNC_INTERVAL_MS,
+        }),
     },
     {
       provide: CancelTransaction,
@@ -152,6 +171,42 @@ const PAYMENT_POLL_DELAYS_MS = [1000, 1500, 2000, 2500];
           pollDelaysMs: PAYMENT_POLL_DELAYS_MS,
         }),
     },
+    {
+      provide: HandlePaymentEvent,
+      inject: [TRANSACTION_REPOSITORY, PAYMENT_GATEWAY, ApplyPaymentResult],
+      useFactory: (
+        transactions: TransactionRepository,
+        gateway: PaymentGateway,
+        applyResult: ApplyPaymentResult,
+      ) => new HandlePaymentEvent(transactions, gateway, applyResult),
+    },
+    {
+      provide: ReconcileTransactions,
+      inject: [
+        TRANSACTION_REPOSITORY,
+        CHECKOUT_UNIT_OF_WORK,
+        PAYMENT_GATEWAY,
+        ApplyPaymentResult,
+        CLOCK,
+      ],
+      useFactory: (
+        transactions: TransactionRepository,
+        checkout: CheckoutUnitOfWork,
+        gateway: PaymentGateway,
+        applyResult: ApplyPaymentResult,
+        clock: Clock,
+      ) =>
+        new ReconcileTransactions({
+          transactions,
+          checkout,
+          gateway,
+          applyResult,
+          clock,
+          batchSize: RECONCILE_BATCH_SIZE,
+          lostClaimAfterMs: LOST_CLAIM_AFTER_MS,
+        }),
+    },
   ],
+  exports: [ReconcileTransactions, TRANSACTION_REPOSITORY],
 })
 export class TransactionsModule {}

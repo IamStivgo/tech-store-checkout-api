@@ -733,6 +733,7 @@
     },
     "/api/v1/transactions/{transactionId}": {
       "get": {
+        "description": "While the payment is PENDING, the payment provider is asked for the result (at most once every 2 s).",
         "operationId": "transactionsDetail",
         "parameters": [
           {
@@ -1025,12 +1026,190 @@
           "Transactions"
         ]
       }
+    },
+    "/api/v1/webhooks/payment-events": {
+      "post": {
+        "description": "Verified with the events checksum; events of another environment or unknown references are acknowledged and ignored.",
+        "operationId": "paymentEventsReceive",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentEventAck"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Receive a payment event from the payment provider",
+        "tags": [
+          "Webhooks"
+        ]
+      }
+    },
+    "/api/v1/deliveries/{deliveryId}": {
+      "get": {
+        "operationId": "deliveriesDetail",
+        "parameters": [
+          {
+            "name": "deliveryId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Delivery"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The resource does not exist.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get a delivery, with the recipient and the address masked",
+        "tags": [
+          "Deliveries"
+        ]
+      }
+    },
+    "/api/v1/transactions/{transactionId}/delivery": {
+      "get": {
+        "description": "Only an APPROVED transaction has a delivery (404 DELIVERY_NOT_FOUND otherwise).",
+        "operationId": "deliveriesOfTransaction",
+        "parameters": [
+          {
+            "name": "transactionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Delivery"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The resource does not exist.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get the delivery of a transaction",
+        "tags": [
+          "Deliveries"
+        ]
+      }
     }
   },
   "info": {
     "title": "Tech Store Checkout API",
     "description": "Catalog, delivery coverage and checkout of a tech accessories store. Errors follow RFC 9457 Problem Details.",
-    "version": "0.3.1",
+    "version": "0.4.0",
     "contact": {}
   },
   "tags": [],
@@ -2106,6 +2285,192 @@
         },
         "required": [
           "status"
+        ]
+      },
+      "PaymentEventSignature": {
+        "type": "object",
+        "properties": {
+          "properties": {
+            "example": [
+              "transaction.id",
+              "transaction.status",
+              "transaction.amount_in_cents"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "checksum": {
+            "type": "string",
+            "description": "SHA-256 of the signed values, the timestamp and the events secret."
+          }
+        },
+        "required": [
+          "properties",
+          "checksum"
+        ]
+      },
+      "PaymentEvent": {
+        "type": "object",
+        "properties": {
+          "event": {
+            "type": "string",
+            "example": "transaction.updated"
+          },
+          "data": {
+            "type": "object",
+            "description": "Event data, e.g. `{ transaction: { id, reference, status, ... } }`."
+          },
+          "environment": {
+            "type": "string",
+            "example": "test"
+          },
+          "signature": {
+            "$ref": "#/components/schemas/PaymentEventSignature"
+          },
+          "timestamp": {
+            "type": "number",
+            "example": 1790566893
+          }
+        },
+        "required": [
+          "event",
+          "data",
+          "environment",
+          "signature",
+          "timestamp"
+        ]
+      },
+      "PaymentEventAck": {
+        "type": "object",
+        "properties": {
+          "received": {
+            "type": "boolean",
+            "example": true
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "applied",
+              "ignored"
+            ]
+          }
+        },
+        "required": [
+          "received",
+          "outcome"
+        ]
+      },
+      "DeliveryProduct": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "Cable USB-C a USB-C 2 m (100 W)"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "DeliveryAddress": {
+        "type": "object",
+        "properties": {
+          "addressLine1": {
+            "type": "string",
+            "description": "First 10 characters only.",
+            "example": "Calle 100 …"
+          },
+          "cityName": {
+            "type": "string",
+            "example": "Bogotá, D.C."
+          },
+          "departmentName": {
+            "type": "string",
+            "example": "Bogotá, D.C."
+          }
+        },
+        "required": [
+          "addressLine1",
+          "cityName",
+          "departmentName"
+        ]
+      },
+      "Delivery": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "transactionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ASSIGNED"
+            ],
+            "example": "ASSIGNED"
+          },
+          "product": {
+            "$ref": "#/components/schemas/DeliveryProduct"
+          },
+          "quantity": {
+            "type": "number",
+            "example": 1
+          },
+          "recipientName": {
+            "type": "string",
+            "description": "Masked: first name and initials.",
+            "example": "Ana M. G."
+          },
+          "address": {
+            "$ref": "#/components/schemas/DeliveryAddress"
+          },
+          "zone": {
+            "type": "string",
+            "enum": [
+              "LOCAL",
+              "METRO",
+              "NATIONAL_MAIN",
+              "NATIONAL_REGIONAL",
+              "SPECIAL_ROUTE"
+            ],
+            "example": "LOCAL"
+          },
+          "deliveryFee": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "estimatedDeliveryDate": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-09-25"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "transactionId",
+          "status",
+          "product",
+          "quantity",
+          "recipientName",
+          "address",
+          "zone",
+          "deliveryFee",
+          "estimatedDeliveryDate",
+          "createdAt"
         ]
       }
     }

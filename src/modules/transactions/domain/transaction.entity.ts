@@ -273,6 +273,21 @@ export class Transaction {
     };
   }
 
+  /**
+   * The reservation ran out and no payment was sent: the order is EXPIRED and its stock can be
+   * released. Null while it can still be paid (or once a payment was sent).
+   */
+  expire(now: Date): Transaction | null {
+    if (
+      this.props.status !== 'PENDING' ||
+      this.props.payment ||
+      this.props.reservationExpiresAt > now
+    ) {
+      return null;
+    }
+    return new Transaction({ ...this.props, status: 'EXPIRED', finalizedAt: now, updatedAt: now });
+  }
+
   /** The buyer gives up before paying: only a PENDING order without a sent payment. */
   cancel(now: Date): Result<Transaction, TransactionNotCancellableError> {
     if (this.props.status !== 'PENDING' || this.props.payment) {

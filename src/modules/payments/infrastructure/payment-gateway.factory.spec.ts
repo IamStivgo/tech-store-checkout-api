@@ -2,6 +2,7 @@ import { GetParametersCommand, SSMClient } from '@aws-sdk/client-ssm';
 import { mockClient } from 'aws-sdk-client-mock';
 
 import { aConfig } from '../../../../test/builders/app-config.builder';
+import { aSignedEvent } from '../../../../test/builders/payment-event.builder';
 
 import { FakePaymentGateway } from './fake/fake-payment-gateway';
 import { createPaymentGateway } from './payment-gateway.factory';
@@ -13,6 +14,7 @@ const HTTP_ENV = {
   PAYMENT_PUBLIC_KEY: 'pub_test_key',
   PAYMENT_PRIVATE_KEY_PARAM: '/checkout-app/test/payment/private-key',
   PAYMENT_INTEGRITY_SECRET: 'integrity_secret_for_tests',
+  PAYMENT_EVENTS_SECRET_PARAM: '/checkout-app/test/payment/events-secret',
 };
 
 describe('createPaymentGateway', () => {
@@ -30,7 +32,10 @@ describe('createPaymentGateway', () => {
 
   it('builds the HTTP provider with the secrets read from SSM', async () => {
     ssmMock.on(GetParametersCommand).resolves({
-      Parameters: [{ Name: '/checkout-app/test/payment/private-key', Value: 'prv_test_key' }],
+      Parameters: [
+        { Name: '/checkout-app/test/payment/private-key', Value: 'prv_test_key' },
+        { Name: '/checkout-app/test/payment/events-secret', Value: 'events_secret_from_ssm' },
+      ],
     });
     const fetchMock = jest
       .spyOn(globalThis, 'fetch')
@@ -43,6 +48,7 @@ describe('createPaymentGateway', () => {
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe('https://provider.test/v1/transactions?reference=CKT-1');
     expect((init.headers as Record<string, string>).Authorization).toBe('Bearer prv_test_key');
+    expect(gateway.parsePaymentEvent(aSignedEvent('events_secret_from_ssm')).isOk).toBe(true);
     fetchMock.mockRestore();
   });
 

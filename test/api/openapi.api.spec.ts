@@ -24,6 +24,7 @@ describe('OpenAPI contract', () => {
       '/api/v1/checkout/quote',
       '/api/v1/customers',
       '/api/v1/customers/{customerId}',
+      '/api/v1/deliveries/{deliveryId}',
       '/api/v1/health',
       '/api/v1/locations/departments',
       '/api/v1/locations/departments/{departmentCode}/cities',
@@ -34,7 +35,9 @@ describe('OpenAPI contract', () => {
       '/api/v1/products/{productId}/stock',
       '/api/v1/transactions',
       '/api/v1/transactions/{transactionId}',
+      '/api/v1/transactions/{transactionId}/delivery',
       '/api/v1/transactions/{transactionId}/payment',
+      '/api/v1/webhooks/payment-events',
     ]);
   });
 
@@ -47,9 +50,12 @@ describe('OpenAPI contract', () => {
       'checkoutQuote',
       'customersCreate',
       'customersDetail',
+      'deliveriesDetail',
+      'deliveriesOfTransaction',
       'healthCheck',
       'locationsCities',
       'locationsDepartments',
+      'paymentEventsReceive',
       'paymentsAcceptanceTokens',
       'paymentsTokenizationKey',
       'productsDetail',

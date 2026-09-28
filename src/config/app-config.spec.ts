@@ -61,6 +61,8 @@ describe('loadAppConfig', () => {
       PAYMENT_PUBLIC_KEY: 'pub_test_key',
       PAYMENT_PRIVATE_KEY_PARAM: '/checkout-app/prod/payment/private-key',
       PAYMENT_INTEGRITY_SECRET_PARAM: '/checkout-app/prod/payment/integrity-secret',
+      PAYMENT_EVENTS_SECRET_PARAM: '/checkout-app/prod/payment/events-secret',
+      PAYMENT_EVENTS_ENVIRONMENT: 'prod',
       PAYMENT_HTTP_TIMEOUT_MS: '4000',
     });
 
@@ -88,6 +90,8 @@ describe('loadAppConfig', () => {
         publicKey: 'pub_test_key',
         privateKey: { parameterName: '/checkout-app/prod/payment/private-key' },
         integritySecret: { parameterName: '/checkout-app/prod/payment/integrity-secret' },
+        eventsSecret: { parameterName: '/checkout-app/prod/payment/events-secret' },
+        eventsEnvironment: 'prod',
         timeoutMs: 4000,
       },
     });
@@ -101,11 +105,15 @@ describe('loadAppConfig', () => {
       PAYMENT_PUBLIC_KEY: 'pub_test_key',
       PAYMENT_PRIVATE_KEY: 'prv_test_key',
       PAYMENT_INTEGRITY_SECRET: 'integrity_secret_for_tests',
+      PAYMENT_EVENTS_SECRET: 'events_secret_for_tests',
     });
 
     expect(config.payments).toMatchObject({
       privateKey: { value: 'prv_test_key' },
       integritySecret: { value: 'integrity_secret_for_tests' },
+      eventsSecret: { value: 'events_secret_for_tests' },
+      // The sandbox sends its events as `test`.
+      eventsEnvironment: 'test',
       timeoutMs: 5000,
     });
   });
@@ -124,6 +132,7 @@ describe('loadAppConfig', () => {
       'PAYMENT_PUBLIC_KEY: required by the http payment provider',
       'PAYMENT_PRIVATE_KEY_PARAM: set it or PAYMENT_PRIVATE_KEY',
       'PAYMENT_INTEGRITY_SECRET_PARAM: set it or PAYMENT_INTEGRITY_SECRET',
+      'PAYMENT_EVENTS_SECRET_PARAM: set it or PAYMENT_EVENTS_SECRET',
     ]);
   });
 

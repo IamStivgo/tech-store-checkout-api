@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from './config/config.module';
 import { CoverageModule } from './modules/coverage/infrastructure/coverage.module';
 import { CustomersModule } from './modules/customers/infrastructure/customers.module';
+import { DeliveriesModule } from './modules/deliveries/infrastructure/deliveries.module';
 import { HealthModule } from './modules/health/infrastructure/health.module';
 import { PaymentsModule } from './modules/payments/infrastructure/payments.module';
 import { PricingModule } from './modules/pricing/infrastructure/pricing.module';
@@ -27,6 +28,7 @@ import { SystemModule } from './shared/infrastructure/system/system.module';
     CustomersModule,
     PaymentsModule,
     TransactionsModule,
+    DeliveriesModule,
   ],
 })
 export class AppModule {}

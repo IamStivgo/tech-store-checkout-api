@@ -30,5 +30,14 @@ export class PaymentProviderTimeoutError extends DomainError {
   }
 }
 
+/** A payment event whose checksum does not match: never trusted (it may be forged). */
+export class InvalidEventSignatureError extends DomainError {
+  readonly code = 'INVALID_EVENT_SIGNATURE';
+
+  constructor() {
+    super('The event signature is not valid.');
+  }
+}
+
 export type PaymentGatewayError =
   PaymentRejectedByProviderError | PaymentProviderUnavailableError | PaymentProviderTimeoutError;

@@ -1,5 +1,10 @@
 import { ConditionalCheckFailedException, DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import {
+  DynamoDBDocumentClient,
+  GetCommand,
+  QueryCommand,
+  UpdateCommand,
+} from '@aws-sdk/lib-dynamodb';
 import { mockClient } from 'aws-sdk-client-mock';
 
 import { aTransaction, TRANSACTION_ID } from '../../../../../test/builders/transaction.builder';
@@ -44,6 +49,51 @@ describe('DynamoDbTransactionRepository', () => {
     const result = await repository.findById(TRANSACTION_ID);
 
     expect(result.isErr && result.error.operation).toBe('transactions.findById');
+  });
+
+  it('finds a transaction by its reference', async () => {
+    dynamo.on(QueryCommand).resolves({ Items: [toTransactionItem(aTransaction())] });
+
+    expect(unwrap(await repository.findByReference('CKT-20260924-7K3M9Q2PXA'))?.id).toBe(
+      TRANSACTION_ID,
+    );
+    expect(dynamo.commandCalls(QueryCommand)[0]?.args[0].input).toMatchObject({
+      IndexName: 'reference-index',
+      ExpressionAttributeValues: { ':reference': 'CKT-20260924-7K3M9Q2PXA' },
+      Limit: 1,
+    });
+  });
+
+  it('returns null for an unknown reference and reports a failed lookup', async () => {
+    dynamo.on(QueryCommand).resolvesOnce({ Items: [] }).rejectsOnce(new Error('throttled'));
+
+    expect(unwrap(await repository.findByReference('CKT-X'))).toBeNull();
+    const failed = await repository.findByReference('CKT-X');
+    expect(failed.isErr && failed.error.operation).toBe('transactions.findByReference');
+  });
+
+  it('reads the oldest pending transactions from the sparse pending index', async () => {
+    dynamo.on(QueryCommand).resolves({ Items: [toTransactionItem(aTransaction())] });
+
+    const pending = unwrap(await repository.findPending(50));
+
+    expect(pending.map(({ id }) => id)).toEqual([TRANSACTION_ID]);
+    expect(dynamo.commandCalls(QueryCommand)[0]?.args[0].input).toEqual({
+      TableName: TABLE,
+      IndexName: 'pending-index',
+      KeyConditionExpression: 'pendingBucket = :bucket',
+      ExpressionAttributeValues: { ':bucket': 'PENDING' },
+      ScanIndexForward: true,
+      Limit: 50,
+    });
+  });
+
+  it('reports a failed query of the pending transactions', async () => {
+    dynamo.on(QueryCommand).rejects(new Error('throttled'));
+
+    const result = await repository.findPending(50);
+
+    expect(result.isErr && result.error.operation).toBe('transactions.findPending');
   });
 
   describe('payment claim', () => {
