@@ -29,6 +29,8 @@ const appConfigSchema = dynamoDbConnectionSchema
     APP_VERSION: z.string().trim().min(1).default('0.0.0-local'),
     LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
     PORT: z.coerce.number().int().min(1).max(MAX_PORT).default(DEFAULT_PORT),
+    // Set in AWS: the API only answers requests carrying CloudFront's secret header (T-086).
+    ORIGIN_VERIFY_SECRET: z.string().trim().min(32).optional(),
     CORS_ALLOWED_ORIGINS: z
       .string()
       .default('')
@@ -134,6 +136,8 @@ export interface AppConfig extends DynamoDbConnection {
   readonly logLevel: LogLevel;
   readonly port: number;
   readonly corsAllowedOrigins: readonly string[];
+  /** Secret CloudFront sends in `x-origin-verify`; unset locally, where there is no CDN. */
+  readonly originVerifySecret: string | undefined;
   readonly tables: {
     readonly products: string;
     readonly customers: string;
@@ -208,6 +212,7 @@ export const loadAppConfig = (env: Env): AppConfig => {
     logLevel: config.LOG_LEVEL,
     port: config.PORT,
     corsAllowedOrigins: config.CORS_ALLOWED_ORIGINS,
+    originVerifySecret: config.ORIGIN_VERIFY_SECRET,
     awsRegion: config.AWS_REGION,
     dynamodbEndpoint: config.DYNAMODB_ENDPOINT,
     tables: {

@@ -17,6 +17,7 @@ const FALLBACK_TITLE = 'Error';
 // Framework messages may echo request data (URL query, body fragments), so they are never exposed.
 const CLIENT_ERROR_DETAILS: Readonly<Partial<Record<number, string>>> = {
   [HttpStatus.NOT_FOUND]: 'The requested resource does not exist.',
+  [HttpStatus.FORBIDDEN]: 'The API only answers requests that come through the store.',
   [HttpStatus.PAYLOAD_TOO_LARGE]: 'The request body is too large.',
   [HttpStatus.UNSUPPORTED_MEDIA_TYPE]: 'The request body must be JSON (application/json).',
 };
