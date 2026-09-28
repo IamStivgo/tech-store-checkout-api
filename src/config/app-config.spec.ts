@@ -7,6 +7,7 @@ const REQUIRED = {
   TABLE_CUSTOMERS: 'checkout-app-local-customers',
   TABLE_TRANSACTIONS: 'checkout-app-local-transactions',
   TABLE_DELIVERIES: 'checkout-app-local-deliveries',
+  TABLE_TRANSACTION_EVENTS: 'checkout-app-local-transaction-events',
   TABLE_IDEMPOTENCY: 'checkout-app-local-idempotency-keys',
 };
 
@@ -20,6 +21,7 @@ describe('loadAppConfig', () => {
       logLevel: 'info',
       port: 3000,
       corsAllowedOrigins: [],
+      originVerifySecret: undefined,
       awsRegion: 'us-east-1',
       dynamodbEndpoint: undefined,
       tables: {
@@ -27,6 +29,7 @@ describe('loadAppConfig', () => {
         customers: 'checkout-app-local-customers',
         transactions: 'checkout-app-local-transactions',
         deliveries: 'checkout-app-local-deliveries',
+        transactionEvents: 'checkout-app-local-transaction-events',
         idempotency: 'checkout-app-local-idempotency-keys',
       },
       catalog: { lowStockThreshold: 3, maxUnitsPerOrder: 5 },
@@ -49,6 +52,7 @@ describe('loadAppConfig', () => {
       TABLE_CUSTOMERS: 'checkout-app-prod-customers',
       TABLE_TRANSACTIONS: 'checkout-app-prod-transactions',
       TABLE_DELIVERIES: 'checkout-app-prod-deliveries',
+      TABLE_TRANSACTION_EVENTS: 'checkout-app-prod-transaction-events',
       STOCK_RESERVATION_TTL_MINUTES: '10',
       REFERENCE_PREFIX: 'TST',
       TABLE_IDEMPOTENCY: 'checkout-app-prod-idempotency-keys',
@@ -72,6 +76,7 @@ describe('loadAppConfig', () => {
       logLevel: 'warn',
       port: 8080,
       corsAllowedOrigins: ['http://localhost:5173', 'http://localhost:8080'],
+      originVerifySecret: undefined,
       awsRegion: 'us-east-2',
       dynamodbEndpoint: 'http://localhost:8000',
       tables: {
@@ -79,6 +84,7 @@ describe('loadAppConfig', () => {
         customers: 'checkout-app-prod-customers',
         transactions: 'checkout-app-prod-transactions',
         deliveries: 'checkout-app-prod-deliveries',
+        transactionEvents: 'checkout-app-prod-transaction-events',
         idempotency: 'checkout-app-prod-idempotency-keys',
       },
       catalog: { lowStockThreshold: 2, maxUnitsPerOrder: 10 },
@@ -176,6 +182,7 @@ describe('loadAppConfig', () => {
       'TABLE_IDEMPOTENCY',
       'TABLE_PRODUCTS',
       'TABLE_TRANSACTIONS',
+      'TABLE_TRANSACTION_EVENTS',
     ]);
   });
 

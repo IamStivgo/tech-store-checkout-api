@@ -1,24 +1,31 @@
-import { ConditionalCheckFailedException, DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import {
+  ConditionalCheckFailedException,
+  DynamoDBClient,
+  TransactionCanceledException,
+} from '@aws-sdk/client-dynamodb';
 import {
   DynamoDBDocumentClient,
   GetCommand,
   QueryCommand,
+  TransactWriteCommand,
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
 import { mockClient } from 'aws-sdk-client-mock';
 
 import { aTransaction, TRANSACTION_ID } from '../../../../../test/builders/transaction.builder';
 import { unwrap } from '../../../../../test/builders/unwrap';
+import { claimReleasedEvents, paymentSubmittedEvents } from '../../domain/transaction-event';
 
 import { DynamoDbTransactionRepository } from './dynamodb-transaction.repository';
 import { toTransactionItem } from './transaction.mapper';
 
 const TABLE = 'checkout-app-test-transactions';
+const EVENTS_TABLE = 'checkout-app-test-transaction-events';
 
 describe('DynamoDbTransactionRepository', () => {
   const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region: 'us-east-1' }));
   const dynamo = mockClient(client);
-  const repository = new DynamoDbTransactionRepository(client, TABLE);
+  const repository = new DynamoDbTransactionRepository(client, TABLE, EVENTS_TABLE);
 
   beforeEach(() => {
     dynamo.reset();
@@ -105,6 +112,14 @@ describe('DynamoDbTransactionRepository', () => {
         $metadata: {},
       });
     const update = () => dynamo.commandCalls(UpdateCommand)[0]?.args[0].input;
+    const written = () =>
+      dynamo.commandCalls(TransactWriteCommand)[0]?.args[0].input.TransactItems ?? [];
+    const paymentConflict = () =>
+      new TransactionCanceledException({
+        message: 'Transaction cancelled',
+        $metadata: {},
+        CancellationReasons: [{ Code: 'ConditionalCheckFailed' }, { Code: 'None' }],
+      });
 
     it('claims the payment only while PENDING, unpaid and reserved', async () => {
       dynamo.on(UpdateCommand).resolves({});
@@ -142,20 +157,31 @@ describe('DynamoDbTransactionRepository', () => {
       expect(result.isErr && result.error.code).toBe('INTERNAL_ERROR');
     });
 
-    it('releases only the claim of the same attempt', async () => {
-      dynamo.on(UpdateCommand).resolves({});
+    it('releases only the claim of the same attempt, with its audit event', async () => {
+      dynamo.on(TransactWriteCommand).resolves({});
 
-      unwrap(await repository.releasePaymentClaim(TRANSACTION_ID, 'attempt-1'));
+      unwrap(
+        await repository.releasePaymentClaim(
+          TRANSACTION_ID,
+          'attempt-1',
+          claimReleasedEvents(claimed(), 'CHECKOUT_API', NOW),
+        ),
+      );
 
-      expect(update()).toMatchObject({
+      const [release, event] = written();
+      expect(release?.Update).toMatchObject({
         UpdateExpression: 'REMOVE payment',
         ConditionExpression: 'payment.attemptId = :attemptId',
         ExpressionAttributeValues: { ':attemptId': 'attempt-1' },
       });
+      expect(event?.Put).toMatchObject({
+        TableName: EVENTS_TABLE,
+        Item: { type: 'PAYMENT_CLAIM_RELEASED', source: 'CHECKOUT_API' },
+      });
     });
 
     it('records the provider data of its own attempt', async () => {
-      dynamo.on(UpdateCommand).resolves({});
+      dynamo.on(TransactWriteCommand).resolves({});
       const recorded = claimed().withProviderPayment(
         {
           providerTransactionId: '15113-1',
@@ -169,28 +195,44 @@ describe('DynamoDbTransactionRepository', () => {
         NOW,
       );
 
-      unwrap(await repository.recordProviderPayment(recorded));
+      unwrap(
+        await repository.recordProviderPayment(
+          recorded,
+          paymentSubmittedEvents(recorded, 'CHECKOUT_API'),
+        ),
+      );
 
-      expect(update()).toMatchObject({
+      const [record, event] = written();
+      expect(record?.Update).toMatchObject({
         ConditionExpression: 'payment.attemptId = :attemptId',
         ExpressionAttributeValues: {
           ':payment': { providerTransactionId: '15113-1', providerStatus: 'PENDING' },
           ':attemptId': 'attempt-1',
         },
       });
+      expect(event?.Put?.Item).toMatchObject({
+        type: 'PAYMENT_SUBMITTED',
+        providerTransactionId: '15113-1',
+        providerStatus: 'PENDING',
+      });
     });
 
     it('does nothing to record without a claimed payment', async () => {
-      unwrap(await repository.recordProviderPayment(aTransaction()));
+      unwrap(await repository.recordProviderPayment(aTransaction(), []));
 
-      expect(dynamo.commandCalls(UpdateCommand)).toHaveLength(0);
+      expect(dynamo.commandCalls(TransactWriteCommand)).toHaveLength(0);
     });
 
     it('leaves another attempt alone and reports other failures', async () => {
-      dynamo.on(UpdateCommand).rejectsOnce(conditionFailed()).rejectsOnce(new Error('throttled'));
+      dynamo
+        .on(TransactWriteCommand)
+        .rejectsOnce(paymentConflict())
+        .rejectsOnce(new Error('throttled'));
 
-      expect((await repository.releasePaymentClaim(TRANSACTION_ID, 'attempt-1')).isOk).toBe(true);
-      const failed = await repository.releasePaymentClaim(TRANSACTION_ID, 'attempt-1');
+      expect((await repository.releasePaymentClaim(TRANSACTION_ID, 'attempt-1', [])).isOk).toBe(
+        true,
+      );
+      const failed = await repository.releasePaymentClaim(TRANSACTION_ID, 'attempt-1', []);
       expect(failed.isErr && failed.error.operation).toBe('transactions.releasePaymentClaim');
     });
   });

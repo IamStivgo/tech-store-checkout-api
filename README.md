@@ -16,6 +16,14 @@ API serverless en NestJS con arquitectura hexagonal y Railway Oriented Programmi
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | Swagger UI (público) | https://d7vch0fsx8645.cloudfront.net/api-docs/index.html                                                                                  |
 | OpenAPI 3            | [`docs/openapi.json`](docs/openapi.json), adjunto también a cada [release](https://github.com/IamStivgo/tech-store-checkout-api/releases) |
+| Colección Postman    | [`docs/postman/checkout-api.postman_collection.json`](docs/postman/checkout-api.postman_collection.json)                                  |
+
+La colección de Postman recorre todo el API en orden (catálogo, cotización, cliente, transacción, pago, entrega, cancelación y webhook): cada petición guarda en variables los ids que usan las siguientes y verifica su respuesta. Para tokenizar la tarjeta contra la pasarela real hay que completar `providerBaseUrl` y `providerPublicKey` con los datos del sandbox; en local, con la pasarela falsa, basta con poner `cardToken` = `tok_fake_approved_4242_1`. También corre desde la terminal:
+
+```bash
+npx newman run docs/postman/checkout-api.postman_collection.json \
+  --env-var "providerBaseUrl=https://<sandbox>/v1" --env-var "providerPublicKey=<llave pública>"
+```
 
 Todas las respuestas de error siguen Problem Details (RFC 9457) con un `code` estable, y los `POST` que crean recursos o cobran exigen `Idempotency-Key`.
 
@@ -38,6 +46,7 @@ Todas las respuestas de error siguen Problem Details (RFC 9457) con un `code` es
 | GET    | `/api/v1/transactions/{transactionId}`          | Estado actual; si el pago sigue PENDING consulta a la pasarela | 200, 400, 404                          |
 | PATCH  | `/api/v1/transactions/{transactionId}`          | Cancela una transacción sin pago enviado y libera el stock     | 200, 400, 404, 409                     |
 | POST   | `/api/v1/transactions/{transactionId}/payment`  | Paga con el token de la tarjeta (idempotente)                  | 200, 202, 400, 404, 409, 422, 502, 504 |
+| GET    | `/api/v1/transactions/{transactionId}/events`   | Bitácora de auditoría de la transacción                        | 200, 400, 404                          |
 | GET    | `/api/v1/transactions/{transactionId}/delivery` | Entrega de una transacción aprobada                            | 200, 400, 404                          |
 | GET    | `/api/v1/deliveries/{deliveryId}`               | Entrega con destinatario y dirección enmascarados              | 200, 400, 404                          |
 | POST   | `/api/v1/webhooks/payment-events`               | Eventos de la pasarela verificados con checksum                | 200, 401                               |
@@ -113,7 +122,7 @@ erDiagram
 | `transactions`       | `transactionId`              | `reference-index`; `pending-index` (solo PENDING) | Consultar, pagar, buscar por referencia (webhook) y conciliar las pendientes sin escanear |
 | `deliveries`         | `deliveryId`                 | —                                                 | Consultar la entrega (la transacción guarda su `deliveryId`)                              |
 | `idempotency-keys`   | `idempotencyKey`             | TTL `expiresAt`                                   | Repetir respuestas de `POST`                                                              |
-| `transaction-events` | `transactionId` + `eventKey` | —                                                 | Reservada para la bitácora de auditoría (sin uso en esta versión)                         |
+| `transaction-events` | `transactionId` + `eventKey` | —                                                 | Bitácora de auditoría append-only, en orden cronológico                                   |
 
 **Reserva de stock:** crear la transacción mueve unidades de `available` a `reserved` en la misma escritura atómica (con condición de stock suficiente). Un pago aprobado las pasa a `sold` y crea la entrega; un pago rechazado, una cancelación o una reserva vencida las devuelve a `available`.
 
@@ -143,6 +152,24 @@ erDiagram
 4. El resultado final se aplica de forma idempotente desde cuatro caminos: la respuesta del pago, la consulta `GET /transactions/{id}` (a lo sumo cada 2 s), el **webhook** (checksum SHA-256 comparado en tiempo constante; 401 si no coincide) y la **conciliación** programada cada 5 minutos, que además vence las reservas sin pago.
 
 Las llaves privadas y los secretos viven en SSM Parameter Store (SecureString) y se leen una vez por arranque de la Lambda.
+
+## Bitácora de auditoría
+
+Cada cambio de una transacción deja eventos inmutables en `transaction-events`, escritos en **la misma operación atómica** (`TransactWriteItems`) que el cambio que describen: o se guardan el estado y sus eventos, o ninguno.
+
+- **Tipos:** `TRANSACTION_CREATED`, `STOCK_RESERVED`, `PAYMENT_SUBMITTED`, `PAYMENT_CLAIM_RELEASED`, `STATUS_CHANGED`, `STOCK_CONFIRMED`, `STOCK_RELEASED`, `DELIVERY_ASSIGNED`, `WEBHOOK_RECEIVED` y `RESULT_MISMATCH`.
+- **Origen (`source`):** qué camino causó el evento: `CHECKOUT_API`, `SHORT_POLL` (la respuesta del pago), `STATUS_SYNC`, `WEBHOOK` o `RECONCILIATION`, con el `requestId` para cruzarlo con los logs.
+- **Inmutable:** los eventos se agregan con escrituras condicionales y las Lambdas no tienen permisos para modificarlos ni borrarlos; nunca guardan datos personales ni tokens.
+- `GET /api/v1/transactions/{id}/events` devuelve la línea de tiempo, por ejemplo de una compra aprobada:
+
+```text
+TRANSACTION_CREATED  CHECKOUT_API  → PENDING, $ 50.900
+STOCK_RESERVED       CHECKOUT_API  quantity 1
+PAYMENT_SUBMITTED    CHECKOUT_API  proveedor PENDING
+STATUS_CHANGED       SHORT_POLL    PENDING → APPROVED
+STOCK_CONFIRMED      SHORT_POLL    quantity 1
+DELIVERY_ASSIGNED    SHORT_POLL    deliveryId
+```
 
 ## Seguridad
 
@@ -218,6 +245,21 @@ npm run start:dev               # http://localhost:3000/api/v1/products
 
 `docker compose down -v` detiene DynamoDB Local y borra sus datos.
 
+### Ejecución local con Docker
+
+Sin Node.js ni cuenta de AWS: solo Docker.
+
+```bash
+docker compose up --build    # API en http://localhost:3000/api/v1
+docker compose down -v       # detiene todo y borra los datos
+```
+
+- `dynamodb`: DynamoDB Local con los datos en un volumen.
+- `api-init`: crea las tablas y carga el catálogo; se puede repetir sin duplicar nada.
+- `api`: la imagen de producción del API (`Dockerfile` multi-stage con Node.js 24 Alpine, solo dependencias de producción, usuario sin privilegios y `HEALTHCHECK` contra `/api/v1/health`), con la pasarela falsa: el token `tok_fake_approved_4242_1` aprueba el pago y `tok_fake_declined_1111_1` lo rechaza.
+
+La colección de Postman funciona contra este stack con `baseUrl` = `http://localhost:3000/api/v1` y `cardToken` = `tok_fake_approved_4242_1`. El repositorio web levanta la tienda completa sobre este mismo stack.
+
 ## Despliegue (GitHub Actions con OIDC, sin llaves de AWS)
 
 La infraestructura (Lambdas, API Gateway, CloudFront, tablas y roles) vive en [tech-store-checkout-infra](https://github.com/IamStivgo/tech-store-checkout-infra); este repositorio solo despliega su código. Los nombres de los recursos se leen de los parámetros SSM `/checkout-app/prod/deploy/*`.
@@ -246,7 +288,6 @@ Los departamentos y municipios de `src/modules/coverage/infrastructure/coverage-
 - **Tokens de aceptación de un solo uso:** la pasarela rechaza un token reutilizado, por eso el web los pide en cada intento de pago.
 - **Llave de tokenización servida por el API:** la pasarela no permite leerla desde el navegador (CORS), así que el API la entrega desde el mismo origen de la tienda.
 - **Webhook sin registrar:** el endpoint está listo y probado, pero la pasarela solo lo llama cuando su URL se registra en el panel del comercio; mientras tanto, la conciliación y la consulta del estado llevan cada pago a su estado final.
-- **Pendiente:** bitácora de auditoría por transacción (la tabla ya existe) y colección de Postman (Swagger cubre la documentación pública).
 
 ## Autor
 

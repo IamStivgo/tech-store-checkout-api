@@ -27,18 +27,25 @@ import { ProductsModule } from '../../products/infrastructure/products.module';
 import { ApplyPaymentResult } from '../application/apply-payment-result.use-case';
 import { CancelTransaction } from '../application/cancel-transaction.use-case';
 import { CreateTransaction } from '../application/create-transaction.use-case';
+import { GetTransactionEvents } from '../application/get-transaction-events.use-case';
 import { GetTransaction } from '../application/get-transaction.use-case';
 import { HandlePaymentEvent } from '../application/handle-payment-event.use-case';
 import { ProcessPayment } from '../application/process-payment.use-case';
 import { ReconcileTransactions } from '../application/reconcile-transactions.use-case';
 import type { CheckoutUnitOfWork } from '../domain/checkout-unit-of-work.port';
+import type { TransactionEventRepository } from '../domain/transaction-event.repository.port';
 import type { TransactionRepository } from '../domain/transaction.repository.port';
 
 import { PaymentEventsController } from './http/payment-events.controller';
 import { TransactionsController } from './http/transactions.controller';
 import { DynamoDbCheckoutUnitOfWork } from './persistence/dynamodb-checkout-unit-of-work';
+import { DynamoDbTransactionEventRepository } from './persistence/dynamodb-transaction-event.repository';
 import { DynamoDbTransactionRepository } from './persistence/dynamodb-transaction.repository';
-import { CHECKOUT_UNIT_OF_WORK, TRANSACTION_REPOSITORY } from './transaction-tokens';
+import {
+  CHECKOUT_UNIT_OF_WORK,
+  TRANSACTION_EVENT_REPOSITORY,
+  TRANSACTION_REPOSITORY,
+} from './transaction-tokens';
 
 // About 8 s of waiting for the final result before answering 202 (backend design §6.2).
 const PAYMENT_POLL_DELAYS_MS = [1000, 1500, 2000, 2500];
@@ -56,7 +63,11 @@ const TRANSACTION_SYNC_INTERVAL_MS = 2000;
       provide: TRANSACTION_REPOSITORY,
       inject: [DYNAMODB_DOCUMENT_CLIENT, APP_CONFIG],
       useFactory: (client: DynamoDBDocumentClient, config: AppConfig): TransactionRepository =>
-        new DynamoDbTransactionRepository(client, config.tables.transactions),
+        new DynamoDbTransactionRepository(
+          client,
+          config.tables.transactions,
+          config.tables.transactionEvents,
+        ),
     },
     {
       provide: CHECKOUT_UNIT_OF_WORK,
@@ -66,7 +77,20 @@ const TRANSACTION_SYNC_INTERVAL_MS = 2000;
           products: config.tables.products,
           transactions: config.tables.transactions,
           deliveries: config.tables.deliveries,
+          transactionEvents: config.tables.transactionEvents,
         }),
+    },
+    {
+      provide: TRANSACTION_EVENT_REPOSITORY,
+      inject: [DYNAMODB_DOCUMENT_CLIENT, APP_CONFIG],
+      useFactory: (client: DynamoDBDocumentClient, config: AppConfig): TransactionEventRepository =>
+        new DynamoDbTransactionEventRepository(client, config.tables.transactionEvents),
+    },
+    {
+      provide: GetTransactionEvents,
+      inject: [TRANSACTION_REPOSITORY, TRANSACTION_EVENT_REPOSITORY],
+      useFactory: (transactions: TransactionRepository, events: TransactionEventRepository) =>
+        new GetTransactionEvents(transactions, events),
     },
     {
       provide: CreateTransaction,
@@ -173,12 +197,20 @@ const TRANSACTION_SYNC_INTERVAL_MS = 2000;
     },
     {
       provide: HandlePaymentEvent,
-      inject: [TRANSACTION_REPOSITORY, PAYMENT_GATEWAY, ApplyPaymentResult],
+      inject: [
+        TRANSACTION_REPOSITORY,
+        TRANSACTION_EVENT_REPOSITORY,
+        PAYMENT_GATEWAY,
+        ApplyPaymentResult,
+        CLOCK,
+      ],
       useFactory: (
         transactions: TransactionRepository,
+        events: TransactionEventRepository,
         gateway: PaymentGateway,
         applyResult: ApplyPaymentResult,
-      ) => new HandlePaymentEvent(transactions, gateway, applyResult),
+        clock: Clock,
+      ) => new HandlePaymentEvent(transactions, events, gateway, applyResult, clock),
     },
     {
       provide: ReconcileTransactions,

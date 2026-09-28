@@ -1,6 +1,7 @@
 import type { PersistenceError } from '../../../shared/domain/persistence-error';
 import type { ResultAsync } from '../../../shared/domain/result';
 
+import type { TransactionEvent } from './transaction-event';
 import type { Transaction } from './transaction.entity';
 import type { PaymentAlreadySubmittedError } from './transaction.errors';
 
@@ -20,7 +21,11 @@ export interface TransactionRepository {
   releasePaymentClaim(
     transactionId: string,
     attemptId: string,
+    events: readonly TransactionEvent[],
   ): ResultAsync<void, PersistenceError>;
   /** Records the provider's data of the payment sent by this attempt. */
-  recordProviderPayment(transaction: Transaction): ResultAsync<void, PersistenceError>;
+  recordProviderPayment(
+    transaction: Transaction,
+    events: readonly TransactionEvent[],
+  ): ResultAsync<void, PersistenceError>;
 }

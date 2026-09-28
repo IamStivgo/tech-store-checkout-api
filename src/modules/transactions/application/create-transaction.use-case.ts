@@ -19,6 +19,7 @@ import {
 import type { ProductRepository } from '../../products/domain/product.repository.port';
 import type { CheckoutUnitOfWork } from '../domain/checkout-unit-of-work.port';
 import { ShippingAddress, type ShippingAddressData } from '../domain/shipping-address.vo';
+import { creationEvents } from '../domain/transaction-event';
 import type { TransactionPolicy } from '../domain/transaction-policy';
 import { newTransactionReference } from '../domain/transaction-reference';
 import { Transaction } from '../domain/transaction.entity';
@@ -78,7 +79,9 @@ export class CreateTransaction {
           ),
       )
       .andThen((transaction) =>
-        this.deps.checkout.reserveStockAndCreate(transaction).map(() => transaction),
+        this.deps.checkout
+          .reserveStockAndCreate(transaction, creationEvents(transaction, 'CHECKOUT_API'))
+          .map(() => transaction),
       );
   }
 

@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import type { INestApplicationContext } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
@@ -7,6 +9,7 @@ import {
   type ReconciliationSummary,
 } from './modules/transactions/application/reconcile-transactions.use-case';
 import { ReconcileModule } from './reconcile.module';
+import { runWithRequestId } from './shared/infrastructure/context/request-context';
 
 export type { ReconciliationSummary };
 
@@ -36,15 +39,15 @@ export const createReconcileHandler = (): ReconcileHandler => {
     const context = await getContext();
     const logger = context.get(Logger);
     // Only reading the pending transactions can fail the run; the scheduler tries again later.
-    const summary = await context
-      .get(ReconcileTransactions)
-      .execute()
-      .match({
-        ok: (value) => value,
-        err: (error) => {
-          throw new Error(`Reconciliation failed: ${error.code}`, { cause: error });
-        },
-      });
+    // Each run has its own id, so its audit events can be told apart (ADR-012).
+    const summary = await runWithRequestId(`reconcile-${randomUUID()}`, () =>
+      context.get(ReconcileTransactions).execute(),
+    ).match({
+      ok: (value) => value,
+      err: (error) => {
+        throw new Error(`Reconciliation failed: ${error.code}`, { cause: error });
+      },
+    });
 
     logger.log(summary, 'Reconciliation run finished');
     return summary;

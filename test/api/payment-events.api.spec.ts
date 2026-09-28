@@ -8,6 +8,7 @@ import {
 import { PAYMENT_GATEWAY } from '../../src/modules/payments/infrastructure/payment-gateway.token';
 import {
   CHECKOUT_UNIT_OF_WORK,
+  TRANSACTION_EVENT_REPOSITORY,
   TRANSACTION_REPOSITORY,
 } from '../../src/modules/transactions/infrastructure/transaction-tokens';
 import { aSignedEvent, anEventTransaction } from '../builders/payment-event.builder';
@@ -30,6 +31,7 @@ describe('Payment events webhook', () => {
       providers: [
         { provide: TRANSACTION_REPOSITORY, useValue: store },
         { provide: CHECKOUT_UNIT_OF_WORK, useValue: store },
+        { provide: TRANSACTION_EVENT_REPOSITORY, useValue: store },
         { provide: PAYMENT_GATEWAY, useValue: new FakePaymentGateway() },
       ],
     });
@@ -47,6 +49,12 @@ describe('Payment events webhook', () => {
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ received: true, outcome: 'applied' });
     expect(store.transactions.get(TRANSACTION_ID)?.status).toBe('APPROVED');
+    expect(store.eventsOf(TRANSACTION_ID).map(({ type, source }) => `${type}/${source}`)).toEqual([
+      'STATUS_CHANGED/WEBHOOK',
+      'STOCK_CONFIRMED/WEBHOOK',
+      'DELIVERY_ASSIGNED/WEBHOOK',
+      'WEBHOOK_RECEIVED/WEBHOOK',
+    ]);
   });
 
   it('acknowledges an unknown reference so the provider does not retry it', async () => {

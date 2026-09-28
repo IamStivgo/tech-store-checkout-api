@@ -42,7 +42,7 @@ describe('FakePaymentGateway', () => {
 
   it.each([
     ['tok_fake_approved_1', 'APPROVED', null],
-    ['tok_fake_declined_1', 'DECLINED', 'Declined by the fake payment provider'],
+    ['tok_fake_declined_1', 'DECLINED', 'Transacción rechazada por la pasarela de prueba local'],
     ['tok_other', 'ERROR', null],
   ] as const)('creates a pending payment that %s turns into %s', async (token, status, message) => {
     const gateway = new FakePaymentGateway();
@@ -52,6 +52,16 @@ describe('FakePaymentGateway', () => {
 
     expect(created.status).toBe('PENDING');
     expect(read).toMatchObject({ status, statusMessage: message, reference: 'CKT-1' });
+  });
+
+  it('reports the last four digits the web wrote in the token', async () => {
+    const gateway = new FakePaymentGateway();
+
+    const declined = unwrap(await gateway.createCardPayment(request('tok_fake_declined_1111_3')));
+    const other = unwrap(await gateway.createCardPayment(request('tok_other', 'CKT-9')));
+
+    expect(declined.cardLastFour).toBe('1111');
+    expect(other.cardLastFour).toBe('0000');
   });
 
   it('finds a payment by its reference', async () => {

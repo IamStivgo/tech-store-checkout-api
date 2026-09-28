@@ -15,6 +15,7 @@ import {
 } from '../../../../../test/builders/transaction.builder';
 import { unwrap } from '../../../../../test/builders/unwrap';
 import { Delivery } from '../../../deliveries/domain/delivery.entity';
+import { creationEvents } from '../../domain/transaction-event';
 
 import { DynamoDbCheckoutUnitOfWork } from './dynamodb-checkout-unit-of-work';
 
@@ -22,6 +23,7 @@ const TABLES = {
   products: 'test-products',
   transactions: 'test-transactions',
   deliveries: 'test-deliveries',
+  transactionEvents: 'test-transaction-events',
 };
 const cancelled = (...reasons: CancellationReason[]) =>
   new TransactionCanceledException({
@@ -41,11 +43,42 @@ describe('DynamoDbCheckoutUnitOfWork', () => {
     dynamo.reset();
   });
 
+  it('appends the audit events in the same transaction, never overwriting one', async () => {
+    dynamo.on(TransactWriteCommand).resolves({});
+    const transaction = aTransaction();
+
+    unwrap(
+      await unitOfWork.reserveStockAndCreate(
+        transaction,
+        creationEvents(transaction, 'CHECKOUT_API'),
+      ),
+    );
+
+    const events = items().slice(2);
+    expect(events.map(({ Put }) => Put?.Item?.type as unknown)).toEqual([
+      'TRANSACTION_CREATED',
+      'STOCK_RESERVED',
+    ]);
+    expect(events[0]?.Put).toMatchObject({
+      TableName: 'test-transaction-events',
+      ConditionExpression: 'attribute_not_exists(eventKey)',
+      Item: {
+        transactionId: TRANSACTION_ID,
+        source: 'CHECKOUT_API',
+        toStatus: 'PENDING',
+        amountInCents: 5_090_000,
+        requestId: 'unknown',
+        occurredAt: '2026-09-24T20:15:00.000Z',
+      },
+    });
+    expect(events[0]?.Put?.Item?.eventKey).toMatch(/^2026-09-24T20:15:00\.000Z#[0-9a-f-]{36}$/);
+  });
+
   describe('reserveStockAndCreate', () => {
     it('reserves the units of an active product and creates the transaction together', async () => {
       dynamo.on(TransactWriteCommand).resolves({});
 
-      unwrap(await unitOfWork.reserveStockAndCreate(aTransaction()));
+      unwrap(await unitOfWork.reserveStockAndCreate(aTransaction(), []));
 
       const [reserve, create] = items();
       expect(reserve?.Update).toMatchObject({
@@ -77,7 +110,7 @@ describe('DynamoDbCheckoutUnitOfWork', () => {
         ),
       );
 
-      const result = await unitOfWork.reserveStockAndCreate(aTransaction());
+      const result = await unitOfWork.reserveStockAndCreate(aTransaction(), []);
 
       expect(result.isErr && result.error).toMatchObject({
         code: 'INSUFFICIENT_STOCK',
@@ -93,7 +126,7 @@ describe('DynamoDbCheckoutUnitOfWork', () => {
         .on(TransactWriteCommand)
         .rejects(cancelled({ Code: 'ConditionalCheckFailed', Item: item }));
 
-      const result = await unitOfWork.reserveStockAndCreate(aTransaction());
+      const result = await unitOfWork.reserveStockAndCreate(aTransaction(), []);
 
       expect(result.isErr && result.error.code).toBe('PRODUCT_NOT_FOUND');
     });
@@ -107,7 +140,7 @@ describe('DynamoDbCheckoutUnitOfWork', () => {
     ])('reports %s as a persistence error', async (_case, failure) => {
       dynamo.on(TransactWriteCommand).rejects(failure);
 
-      const result = await unitOfWork.reserveStockAndCreate(aTransaction());
+      const result = await unitOfWork.reserveStockAndCreate(aTransaction(), []);
 
       expect(result.isErr && result.error.code).toBe('INTERNAL_ERROR');
     });
@@ -129,7 +162,9 @@ describe('DynamoDbCheckoutUnitOfWork', () => {
       dynamo.on(TransactWriteCommand).resolves({});
       const { approved, delivery } = approve();
 
-      expect(unwrap(await unitOfWork.approveAndAssignDelivery(approved, delivery))).toBe('applied');
+      expect(unwrap(await unitOfWork.approveAndAssignDelivery(approved, delivery, []))).toBe(
+        'applied',
+      );
 
       const [transaction, product, created] = items();
       expect(transaction?.Update).toMatchObject({
@@ -162,7 +197,7 @@ describe('DynamoDbCheckoutUnitOfWork', () => {
       dynamo.on(TransactWriteCommand).rejects(cancelled({ Code: 'ConditionalCheckFailed' }));
       const { approved, delivery } = approve();
 
-      expect(unwrap(await unitOfWork.approveAndAssignDelivery(approved, delivery))).toBe(
+      expect(unwrap(await unitOfWork.approveAndAssignDelivery(approved, delivery, []))).toBe(
         'already-final',
       );
     });
@@ -175,7 +210,9 @@ describe('DynamoDbCheckoutUnitOfWork', () => {
     it('closes the pending transaction and returns its units to stock', async () => {
       dynamo.on(TransactWriteCommand).resolves({});
 
-      expect(unwrap(await unitOfWork.closeAndReleaseStock(cancelledTransaction()))).toBe('applied');
+      expect(unwrap(await unitOfWork.closeAndReleaseStock(cancelledTransaction(), []))).toBe(
+        'applied',
+      );
 
       const [close, release] = items();
       expect(close?.Update).toMatchObject({
@@ -212,7 +249,7 @@ describe('DynamoDbCheckoutUnitOfWork', () => {
         },
       });
 
-      await unitOfWork.closeAndReleaseStock(declined);
+      await unitOfWork.closeAndReleaseStock(declined, []);
 
       expect(items()[0]?.Update).toMatchObject({
         ConditionExpression: '#status = :pending',
@@ -225,7 +262,7 @@ describe('DynamoDbCheckoutUnitOfWork', () => {
         .on(TransactWriteCommand)
         .rejects(cancelled({ Code: 'ConditionalCheckFailed' }, { Code: 'None' }));
 
-      expect(unwrap(await unitOfWork.closeAndReleaseStock(cancelledTransaction()))).toBe(
+      expect(unwrap(await unitOfWork.closeAndReleaseStock(cancelledTransaction(), []))).toBe(
         'already-final',
       );
     });
@@ -235,7 +272,7 @@ describe('DynamoDbCheckoutUnitOfWork', () => {
         .on(TransactWriteCommand)
         .rejects(cancelled({ Code: 'None' }, { Code: 'ConditionalCheckFailed' }));
 
-      const result = await unitOfWork.closeAndReleaseStock(cancelledTransaction());
+      const result = await unitOfWork.closeAndReleaseStock(cancelledTransaction(), []);
 
       expect(result.isErr && result.error.operation).toBe('transactions.closeAndReleaseStock');
     });
