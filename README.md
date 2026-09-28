@@ -16,6 +16,14 @@ API serverless en NestJS con arquitectura hexagonal y Railway Oriented Programmi
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | Swagger UI (público) | https://d7vch0fsx8645.cloudfront.net/api-docs/index.html                                                                                  |
 | OpenAPI 3            | [`docs/openapi.json`](docs/openapi.json), adjunto también a cada [release](https://github.com/IamStivgo/tech-store-checkout-api/releases) |
+| Colección Postman    | [`docs/postman/checkout-api.postman_collection.json`](docs/postman/checkout-api.postman_collection.json)                                  |
+
+La colección de Postman recorre todo el API en orden (catálogo, cotización, cliente, transacción, pago, entrega, cancelación y webhook): cada petición guarda en variables los ids que usan las siguientes y verifica su respuesta. Para tokenizar la tarjeta contra la pasarela real hay que completar `providerBaseUrl` y `providerPublicKey` con los datos del sandbox; en local, con la pasarela falsa, basta con poner `cardToken` = `tok_fake_approved_4242_1`. También corre desde la terminal:
+
+```bash
+npx newman run docs/postman/checkout-api.postman_collection.json \
+  --env-var "providerBaseUrl=https://<sandbox>/v1" --env-var "providerPublicKey=<llave pública>"
+```
 
 Todas las respuestas de error siguen Problem Details (RFC 9457) con un `code` estable, y los `POST` que crean recursos o cobran exigen `Idempotency-Key`.
 
@@ -246,7 +254,7 @@ Los departamentos y municipios de `src/modules/coverage/infrastructure/coverage-
 - **Tokens de aceptación de un solo uso:** la pasarela rechaza un token reutilizado, por eso el web los pide en cada intento de pago.
 - **Llave de tokenización servida por el API:** la pasarela no permite leerla desde el navegador (CORS), así que el API la entrega desde el mismo origen de la tienda.
 - **Webhook sin registrar:** el endpoint está listo y probado, pero la pasarela solo lo llama cuando su URL se registra en el panel del comercio; mientras tanto, la conciliación y la consulta del estado llevan cada pago a su estado final.
-- **Pendiente:** bitácora de auditoría por transacción (la tabla ya existe) y colección de Postman (Swagger cubre la documentación pública).
+- **Pendiente:** bitácora de auditoría por transacción (la tabla ya existe).
 
 ## Autor
 
