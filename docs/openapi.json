@@ -576,6 +576,59 @@
         ]
       }
     },
+    "/api/v1/payments/tokenization-key": {
+      "get": {
+        "description": "Served from the store origin because the payment provider does not allow reading it from the browser (CORS).",
+        "operationId": "paymentsTokenizationKey",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenizationKey"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The payment provider is not available.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "The payment provider did not answer in time.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get the public key the browser encrypts the card with before tokenizing it",
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
     "/api/v1/transactions": {
       "post": {
         "description": "The amounts are computed on the server; the stock stays reserved until reservationExpiresAt if the payment is not sent.",
@@ -977,7 +1030,7 @@
   "info": {
     "title": "Tech Store Checkout API",
     "description": "Catalog, delivery coverage and checkout of a tech accessories store. Errors follow RFC 9457 Problem Details.",
-    "version": "0.3.0",
+    "version": "0.3.1",
     "contact": {}
   },
   "tags": [],
@@ -1711,6 +1764,19 @@
         "required": [
           "endUserPolicy",
           "personalDataAuth"
+        ]
+      },
+      "TokenizationKey": {
+        "type": "object",
+        "properties": {
+          "publicKey": {
+            "type": "string",
+            "description": "RSA public key (PEM) to encrypt the card (JWE, RSA-OAEP-256 + A256GCM).",
+            "example": "-----BEGIN PUBLIC KEY----- MIIBIjANBgkq... -----END PUBLIC KEY-----"
+          }
+        },
+        "required": [
+          "publicKey"
         ]
       },
       "ShippingAddressRequest": {

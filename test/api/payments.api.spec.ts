@@ -38,6 +38,14 @@ describe('Payments API', () => {
     expect(second.body).not.toEqual(first.body);
   });
 
+  it('serves the key to encrypt the card, cacheable for an hour', async () => {
+    const response = await request(app.getHttpServer()).get('/api/v1/payments/tokenization-key');
+
+    expect(response.status).toBe(200);
+    expect(response.headers['cache-control']).toBe('public, max-age=3600');
+    expect(response.body).toEqual({ publicKey: expect.stringContaining('PUBLIC KEY') as string });
+  });
+
   it('answers 502 when the payment provider is not available', async () => {
     jest
       .spyOn(gateway, 'getAcceptanceTokens')

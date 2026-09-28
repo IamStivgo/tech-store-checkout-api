@@ -17,6 +17,7 @@ import { integritySignature } from './integrity-signature';
 import {
   merchantResponseSchema,
   providerErrorSchema,
+  tokenizationKeyResponseSchema,
   transactionListResponseSchema,
   transactionResponseSchema,
   type ProviderTransaction,
@@ -29,6 +30,11 @@ export interface HttpPaymentGatewayOptions {
   readonly privateKey: string;
   readonly integritySecret: string;
   readonly timeoutMs: number;
+}
+
+interface CachedKey {
+  readonly value: string;
+  readonly expiresAt: number;
 }
 
 interface ProviderResponse {
@@ -44,6 +50,8 @@ const HTTP_SERVER_ERROR = 500;
 const COLOMBIA_PHONE_PREFIX = '57';
 // Reads are safe to repeat once when the provider fails or is slow.
 const READ_ATTEMPTS = 2;
+// The tokenization key rarely changes: one download per hour and function instance.
+const TOKENIZATION_KEY_TTL_MS = 3_600_000;
 
 const readBody = async (response: Response): Promise<unknown> => {
   const text = await response.text();
@@ -76,13 +84,36 @@ const toProviderPayment = (
 
 /** Payment provider REST API (sandbox), with timeouts and validation of every answer. */
 export class HttpPaymentGateway implements PaymentGateway {
+  private tokenizationKey: CachedKey | undefined;
+
   constructor(
     private readonly options: HttpPaymentGatewayOptions,
     private readonly fetchFn: Fetch = fetch,
+    private readonly now: () => number = Date.now,
   ) {}
 
   getAcceptanceTokens(): ResultAsync<AcceptanceTokens, PaymentGatewayError> {
     return new ResultAsync(this.fetchAcceptanceTokens());
+  }
+
+  getTokenizationKey(): ResultAsync<string, PaymentGatewayError> {
+    const cached = this.tokenizationKey;
+    if (cached && cached.expiresAt > this.now()) {
+      return new ResultAsync(Promise.resolve(ok(cached.value)));
+    }
+    return new ResultAsync(
+      this.read('/tokens/keys/tokenization', this.options.publicKey).then((response) =>
+        response
+          .andThen((received) => this.parse(received, tokenizationKeyResponseSchema))
+          .map(({ data }) => {
+            this.tokenizationKey = {
+              value: data.publicKey,
+              expiresAt: this.now() + TOKENIZATION_KEY_TTL_MS,
+            };
+            return data.publicKey;
+          }),
+      ),
+    );
   }
 
   createCardPayment(
