@@ -2,13 +2,13 @@ import type { INestApplicationContext } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
 
+import {
+  ReconcileTransactions,
+  type ReconciliationSummary,
+} from './modules/transactions/application/reconcile-transactions.use-case';
 import { ReconcileModule } from './reconcile.module';
 
-export interface ReconciliationSummary {
-  readonly expired: number;
-  readonly synced: number;
-  readonly failed: number;
-}
+export type { ReconciliationSummary };
 
 export type ReconcileHandler = () => Promise<ReconciliationSummary>;
 
@@ -34,9 +34,19 @@ export const createReconcileHandler = (): ReconcileHandler => {
 
   return async () => {
     const context = await getContext();
-    const summary: ReconciliationSummary = { expired: 0, synced: 0, failed: 0 };
+    const logger = context.get(Logger);
+    // Only reading the pending transactions can fail the run; the scheduler tries again later.
+    const summary = await context
+      .get(ReconcileTransactions)
+      .execute()
+      .match({
+        ok: (value) => value,
+        err: (error) => {
+          throw new Error(`Reconciliation failed: ${error.code}`, { cause: error });
+        },
+      });
 
-    context.get(Logger).log(summary, 'Reconciliation run finished');
+    logger.log(summary, 'Reconciliation run finished');
     return summary;
   };
 };

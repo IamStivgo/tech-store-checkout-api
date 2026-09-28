@@ -60,6 +60,25 @@ describe('Transaction', () => {
     expect(result.isErr && result.error.fieldErrors[0]?.field).toBe('amounts');
   });
 
+  describe('expire', () => {
+    it('expires an unpaid order once its reservation ran out', () => {
+      const transaction = aTransaction();
+      const expired = transaction.expire(transaction.reservationExpiresAt);
+
+      expect(expired?.status).toBe('EXPIRED');
+      expect(expired?.finalizedAt).toEqual(transaction.reservationExpiresAt);
+    });
+
+    it('keeps an order that can still be paid or whose payment was sent', () => {
+      const transaction = aTransaction();
+      const later = new Date(transaction.reservationExpiresAt.getTime() + 60_000);
+      const claimed = transaction.claimPayment('attempt-1', 1, transaction.createdAt);
+
+      expect(transaction.expire(transaction.createdAt)).toBeNull();
+      expect(claimed.expire(later)).toBeNull();
+    });
+  });
+
   describe('cancel', () => {
     const now = new Date('2026-09-24T20:20:00.000Z');
 

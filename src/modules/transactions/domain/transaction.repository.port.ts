@@ -6,6 +6,8 @@ import type { PaymentAlreadySubmittedError } from './transaction.errors';
 
 export interface TransactionRepository {
   findById(id: string): ResultAsync<Transaction | null, PersistenceError>;
+  /** The oldest PENDING transactions (sparse pending-index), at most `limit`. */
+  findPending(limit: number): ResultAsync<Transaction[], PersistenceError>;
   /**
    * Stores the claimed payment only if the transaction is still PENDING, has no payment and its
    * reservation is valid, so two concurrent payments can never both be sent.

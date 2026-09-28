@@ -1,13 +1,19 @@
 import { ConditionalCheckFailedException } from '@aws-sdk/client-dynamodb';
-import { GetCommand, UpdateCommand, type DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
+import {
+  GetCommand,
+  QueryCommand,
+  UpdateCommand,
+  type DynamoDBDocumentClient,
+} from '@aws-sdk/lib-dynamodb';
 
 import { PersistenceError } from '../../../../shared/domain/persistence-error';
-import { err, ok, ResultAsync, type Result } from '../../../../shared/domain/result';
+import { combine, err, ok, ResultAsync, type Result } from '../../../../shared/domain/result';
 import type { Transaction } from '../../domain/transaction.entity';
 import { PaymentAlreadySubmittedError } from '../../domain/transaction.errors';
 import type { TransactionRepository } from '../../domain/transaction.repository.port';
 
-import { toPaymentItem, toTransaction } from './transaction.mapper';
+import { PENDING_BUCKET, toPaymentItem, toTransaction } from './transaction.mapper';
+import { PENDING_INDEX } from './transactions-table.definition';
 
 const isConditionFailure = (cause: unknown): boolean =>
   cause instanceof ConditionalCheckFailedException;
@@ -30,6 +36,22 @@ export class DynamoDbTransactionRepository implements TransactionRepository {
       ),
       (cause) => new PersistenceError('transactions.findById', cause),
     ).andThen(({ Item }) => (Item ? toTransaction(Item) : ok(null)));
+  }
+
+  findPending(limit: number): ResultAsync<Transaction[], PersistenceError> {
+    return ResultAsync.fromPromise(
+      this.client.send(
+        new QueryCommand({
+          TableName: this.tableName,
+          IndexName: PENDING_INDEX,
+          KeyConditionExpression: 'pendingBucket = :bucket',
+          ExpressionAttributeValues: { ':bucket': PENDING_BUCKET },
+          ScanIndexForward: true,
+          Limit: limit,
+        }),
+      ),
+      (cause) => new PersistenceError('transactions.findPending', cause),
+    ).andThen(({ Items = [] }) => combine(Items.map((item) => toTransaction(item))));
   }
 
   claimPaymentSubmission(
