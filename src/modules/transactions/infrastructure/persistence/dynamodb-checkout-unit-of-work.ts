@@ -3,16 +3,19 @@ import { TransactWriteCommand, type DynamoDBDocumentClient } from '@aws-sdk/lib-
 
 import { PersistenceError } from '../../../../shared/domain/persistence-error';
 import { err, ok, ResultAsync, type Result } from '../../../../shared/domain/result';
+import type { Delivery } from '../../../deliveries/domain/delivery.entity';
+import { toDeliveryItem } from '../../../deliveries/infrastructure/persistence/delivery.mapper';
 import { ProductNotFoundError } from '../../../products/domain/product.errors';
 import type { ApplyOutcome, CheckoutUnitOfWork } from '../../domain/checkout-unit-of-work.port';
 import type { Transaction } from '../../domain/transaction.entity';
 import { InsufficientStockError } from '../../domain/transaction.errors';
 
-import { toTransactionItem } from './transaction.mapper';
+import { toPaymentItem, toTransactionItem } from './transaction.mapper';
 
 export interface CheckoutTables {
   readonly products: string;
   readonly transactions: string;
+  readonly deliveries: string;
 }
 
 const CONDITION_FAILED = 'ConditionalCheckFailed';
@@ -78,47 +81,110 @@ export class DynamoDbCheckoutUnitOfWork implements CheckoutUnitOfWork {
     );
   }
 
+  approveAndAssignDelivery(
+    transaction: Transaction,
+    delivery: Delivery,
+  ): ResultAsync<ApplyOutcome, PersistenceError> {
+    const now = transaction.updatedAt.toISOString();
+    return this.finalize(
+      'transactions.approveAndAssignDelivery',
+      this.client.send(
+        new TransactWriteCommand({
+          TransactItems: [
+            this.finalTransactionUpdate(transaction, {
+              extraSet: ', deliveryId = :deliveryId',
+              extraValues: { ':deliveryId': delivery.id },
+            }),
+            {
+              Update: {
+                TableName: this.tables.products,
+                Key: { productId: transaction.productId },
+                UpdateExpression:
+                  'SET stockReserved = stockReserved - :quantity, stockSold = stockSold + :quantity, updatedAt = :now ADD version :one',
+                ConditionExpression: 'stockReserved >= :quantity',
+                ExpressionAttributeValues: {
+                  ':quantity': transaction.quantity,
+                  ':now': now,
+                  ':one': 1,
+                },
+              },
+            },
+            {
+              Put: {
+                TableName: this.tables.deliveries,
+                Item: toDeliveryItem(delivery),
+                ConditionExpression: 'attribute_not_exists(deliveryId)',
+              },
+            },
+          ],
+        }),
+      ),
+    );
+  }
+
   closeAndReleaseStock(transaction: Transaction): ResultAsync<ApplyOutcome, PersistenceError> {
     const now = transaction.updatedAt.toISOString();
-    // A payment claimed in the meantime must not be cancelled or expired from under it.
-    const noPayment = transaction.payment ? '' : ' AND attribute_not_exists(payment)';
-    const write = this.client.send(
-      new TransactWriteCommand({
-        TransactItems: [
-          {
-            Update: {
-              TableName: this.tables.transactions,
-              Key: { transactionId: transaction.id },
-              UpdateExpression:
-                'SET #status = :status, finalizedAt = :finalizedAt, updatedAt = :now REMOVE pendingBucket, pendingSince',
-              ConditionExpression: `#status = :pending${noPayment}`,
-              ExpressionAttributeNames: { '#status': 'status' },
-              ExpressionAttributeValues: {
-                ':status': transaction.status,
-                ':finalizedAt': (transaction.finalizedAt ?? transaction.updatedAt).toISOString(),
-                ':now': now,
-                ':pending': 'PENDING',
+    return this.finalize(
+      'transactions.closeAndReleaseStock',
+      this.client.send(
+        new TransactWriteCommand({
+          TransactItems: [
+            this.finalTransactionUpdate(transaction),
+            {
+              Update: {
+                TableName: this.tables.products,
+                Key: { productId: transaction.productId },
+                UpdateExpression:
+                  'SET stockAvailable = stockAvailable + :quantity, stockReserved = stockReserved - :quantity, updatedAt = :now ADD version :one',
+                ConditionExpression: 'stockReserved >= :quantity',
+                ExpressionAttributeValues: {
+                  ':quantity': transaction.quantity,
+                  ':now': now,
+                  ':one': 1,
+                },
               },
             },
-          },
-          {
-            Update: {
-              TableName: this.tables.products,
-              Key: { productId: transaction.productId },
-              UpdateExpression:
-                'SET stockAvailable = stockAvailable + :quantity, stockReserved = stockReserved - :quantity, updatedAt = :now ADD version :one',
-              ConditionExpression: 'stockReserved >= :quantity',
-              ExpressionAttributeValues: {
-                ':quantity': transaction.quantity,
-                ':now': now,
-                ':one': 1,
-              },
-            },
-          },
-        ],
-      }),
+          ],
+        }),
+      ),
     );
+  }
 
+  /** Moves the transaction from PENDING to its final state, storing its payment if it has one. */
+  private finalTransactionUpdate(
+    transaction: Transaction,
+    {
+      extraSet = '',
+      extraValues = {},
+    }: { extraSet?: string; extraValues?: Record<string, unknown> } = {},
+  ) {
+    const { payment } = transaction;
+    // A payment claimed in the meantime must not be cancelled or expired from under it.
+    const noPayment = payment ? '' : ' AND attribute_not_exists(payment)';
+    const setPayment = payment ? ', payment = :payment' : '';
+    return {
+      Update: {
+        TableName: this.tables.transactions,
+        Key: { transactionId: transaction.id },
+        UpdateExpression: `SET #status = :status, finalizedAt = :finalizedAt, updatedAt = :now${setPayment}${extraSet} REMOVE pendingBucket, pendingSince`,
+        ConditionExpression: `#status = :pending${noPayment}`,
+        ExpressionAttributeNames: { '#status': 'status' },
+        ExpressionAttributeValues: {
+          ':status': transaction.status,
+          ':finalizedAt': (transaction.finalizedAt ?? transaction.updatedAt).toISOString(),
+          ':now': transaction.updatedAt.toISOString(),
+          ':pending': 'PENDING',
+          ...(payment ? { ':payment': toPaymentItem(payment) } : {}),
+          ...extraValues,
+        },
+      },
+    };
+  }
+
+  private finalize(
+    operation: string,
+    write: Promise<unknown>,
+  ): ResultAsync<ApplyOutcome, PersistenceError> {
     return new ResultAsync(
       write.then(
         (): Result<ApplyOutcome, PersistenceError> => ok('applied'),
@@ -126,7 +192,7 @@ export class DynamoDbCheckoutUnitOfWork implements CheckoutUnitOfWork {
           // The transaction was no longer PENDING: another path closed it first (data model §4.5).
           reasonsOf(cause)?.[0]?.Code === CONDITION_FAILED
             ? ok('already-final')
-            : err(new PersistenceError('transactions.closeAndReleaseStock', cause)),
+            : err(new PersistenceError(operation, cause)),
       ),
     );
   }

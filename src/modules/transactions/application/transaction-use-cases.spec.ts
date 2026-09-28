@@ -86,7 +86,7 @@ describe('CreateTransaction', () => {
     });
     expect(transaction.product).toMatchObject({ sku: 'TEC-CBL-USBC', unitPrice: cop(39_900) });
     expect(transaction.reservationExpiresAt).toEqual(new Date('2026-09-24T20:30:00.000Z'));
-    expect(store.stock.get(PRODUCT_ID)).toEqual({ available: 29, reserved: 1 });
+    expect(store.stock.get(PRODUCT_ID)).toEqual({ available: 29, reserved: 1, sold: 0 });
   });
 
   it('validates the delivery address before anything else', async () => {
@@ -175,7 +175,7 @@ describe('CancelTransaction', () => {
   const later = new FakeClock(new Date('2026-09-24T20:20:00.000Z'));
   const withPending = () => {
     const store = new InMemoryCheckoutStore().withStock(PRODUCT_ID, 29);
-    store.stock.set(PRODUCT_ID, { available: 29, reserved: 1 });
+    store.stock.set(PRODUCT_ID, { available: 29, reserved: 1, sold: 0 });
     store.transactions.set(TRANSACTION_ID, aTransaction());
     return store;
   };
@@ -189,7 +189,7 @@ describe('CancelTransaction', () => {
 
     expect(cancelled.status).toBe('CANCELLED');
     expect(store.transactions.get(TRANSACTION_ID)?.status).toBe('CANCELLED');
-    expect(store.stock.get(PRODUCT_ID)).toEqual({ available: 30, reserved: 0 });
+    expect(store.stock.get(PRODUCT_ID)).toEqual({ available: 30, reserved: 0, sold: 0 });
   });
 
   it('refuses a transaction that is already final', async () => {

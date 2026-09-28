@@ -47,6 +47,7 @@ import { CHECKOUT_UNIT_OF_WORK, TRANSACTION_REPOSITORY } from './transaction-tok
         new DynamoDbCheckoutUnitOfWork(client, {
           products: config.tables.products,
           transactions: config.tables.transactions,
+          deliveries: config.tables.deliveries,
         }),
     },
     {

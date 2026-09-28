@@ -101,7 +101,7 @@ describe('Transactions API', () => {
         createdAt: '2026-09-24T20:15:00.000Z',
         updatedAt: '2026-09-24T20:15:00.000Z',
       });
-      expect(store.stock.get(PRODUCT_ID)).toEqual({ available: 29, reserved: 1 });
+      expect(store.stock.get(PRODUCT_ID)).toEqual({ available: 29, reserved: 1, sold: 0 });
     });
 
     it('replays a retried request without reserving twice', async () => {
@@ -111,7 +111,7 @@ describe('Transactions API', () => {
 
       expect(retry.status).toBe(201);
       expect(retry.headers['idempotent-replayed']).toBe('true');
-      expect(store.stock.get(PRODUCT_ID)).toEqual({ available: 29, reserved: 1 });
+      expect(store.stock.get(PRODUCT_ID)).toEqual({ available: 29, reserved: 1, sold: 0 });
     });
 
     it('never accepts amounts from the client', async () => {
@@ -179,7 +179,7 @@ describe('Transactions API', () => {
     });
 
     it('answers 409 when another buyer took the last units', async () => {
-      store.stock.set(PRODUCT_ID, { available: 0, reserved: 30 });
+      store.stock.set(PRODUCT_ID, { available: 0, reserved: 30, sold: 0 });
 
       const response = await create(body());
 
@@ -226,7 +226,7 @@ describe('Transactions API', () => {
         status: 'CANCELLED',
         finalizedAt: '2026-09-24T20:15:00.000Z',
       });
-      expect(store.stock.get(PRODUCT_ID)).toEqual({ available: 30, reserved: 0 });
+      expect(store.stock.get(PRODUCT_ID)).toEqual({ available: 30, reserved: 0, sold: 0 });
     });
 
     it('also accepts plain JSON and refuses a second cancellation', async () => {
