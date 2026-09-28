@@ -6,7 +6,7 @@ import { Logger } from 'nestjs-pino';
 import type { AppConfig } from '../../../config/app-config';
 
 import { ProblemDetailsFilter } from './problem-details.filter';
-import { assignRequestId, rejectNonJsonBody } from './request-guards';
+import { assignRequestId, JSON_CONTENT_TYPES, rejectNonJsonBody } from './request-guards';
 
 export const GLOBAL_PREFIX = 'api';
 export const DEFAULT_API_VERSION = '1';
@@ -35,7 +35,7 @@ export const configureApp = (app: NestExpressApplication, config: AppConfig): vo
   app.use(assignRequestId);
   app.use(helmet(helmetOptions));
   app.use(rejectNonJsonBody);
-  app.useBodyParser('json', { limit: MAX_BODY_SIZE });
+  app.useBodyParser('json', { limit: MAX_BODY_SIZE, type: JSON_CONTENT_TYPES });
   app.setGlobalPrefix(GLOBAL_PREFIX);
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: DEFAULT_API_VERSION });
   app.useGlobalFilters(new ProblemDetailsFilter());

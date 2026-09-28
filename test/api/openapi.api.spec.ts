@@ -31,6 +31,8 @@ describe('OpenAPI contract', () => {
       '/api/v1/products',
       '/api/v1/products/{productId}',
       '/api/v1/products/{productId}/stock',
+      '/api/v1/transactions',
+      '/api/v1/transactions/{transactionId}',
     ]);
   });
 
@@ -50,6 +52,9 @@ describe('OpenAPI contract', () => {
       'productsDetail',
       'productsList',
       'productsStock',
+      'transactionsCreate',
+      'transactionsDetail',
+      'transactionsUpdate',
     ]);
   });
 

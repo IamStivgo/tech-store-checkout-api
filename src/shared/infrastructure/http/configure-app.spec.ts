@@ -51,7 +51,10 @@ describe('configureApp', () => {
       ([middleware]: [{ name: string }]) => middleware.name,
     );
     expect(middlewares).toEqual(['assignRequestId', 'helmetMiddleware', 'rejectNonJsonBody']);
-    expect(app.useBodyParser).toHaveBeenCalledWith('json', { limit: '16kb' });
+    expect(app.useBodyParser).toHaveBeenCalledWith('json', {
+      limit: '16kb',
+      type: ['application/json', 'application/merge-patch+json'],
+    });
   });
 
   it('answers every error with Problem Details', () => {

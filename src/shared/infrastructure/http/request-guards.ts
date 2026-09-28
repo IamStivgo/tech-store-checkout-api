@@ -3,7 +3,8 @@ import type { NextFunction, Request, Response } from 'express';
 
 import { resolveRequestId } from '../logging/logger-params';
 
-const JSON_CONTENT_TYPE = 'application/json';
+/** JSON, and JSON Merge Patch (RFC 7396) for partial updates such as cancelling a transaction. */
+export const JSON_CONTENT_TYPES = ['application/json', 'application/merge-patch+json'];
 
 /**
  * Gives the request its id before anything can fail (e.g. the body parser), so every
@@ -21,7 +22,7 @@ const hasContent = (request: Request): boolean =>
 
 /** Requests with a body must send JSON: anything else is answered 415 before parsing it. */
 export const rejectNonJsonBody = (request: Request, _response: Response, next: NextFunction) => {
-  if (hasContent(request) && !request.is(JSON_CONTENT_TYPE)) {
+  if (hasContent(request) && !request.is(JSON_CONTENT_TYPES)) {
     next(new UnsupportedMediaTypeException());
     return;
   }

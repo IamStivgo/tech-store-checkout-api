@@ -13,6 +13,8 @@ const DEFAULT_MAX_UNITS_PER_ORDER = 5;
 const DEFAULT_SERVICE_FEE_IN_CENTS = 300_000;
 const DEFAULT_FREE_SHIPPING_THRESHOLD_IN_CENTS = 15_000_000;
 const PAYMENT_PROVIDERS = ['http', 'fake'] as const;
+const DEFAULT_RESERVATION_TTL_MINUTES = 15;
+const DEFAULT_REFERENCE_PREFIX = 'CKT';
 const DEFAULT_PAYMENT_TIMEOUT_MS = 5000;
 
 // Connection settings shared by the app and the scripts that only touch one table (seed).
@@ -38,6 +40,7 @@ const appConfigSchema = dynamoDbConnectionSchema
       ),
     TABLE_PRODUCTS: z.string().trim().min(1),
     TABLE_CUSTOMERS: z.string().trim().min(1),
+    TABLE_TRANSACTIONS: z.string().trim().min(1),
     TABLE_IDEMPOTENCY: z.string().trim().min(1),
     LOW_STOCK_THRESHOLD: z.coerce.number().int().min(0).default(DEFAULT_LOW_STOCK_THRESHOLD),
     MAX_UNITS_PER_ORDER: z.coerce.number().int().min(1).default(DEFAULT_MAX_UNITS_PER_ORDER),
@@ -47,6 +50,15 @@ const appConfigSchema = dynamoDbConnectionSchema
       .int()
       .min(0)
       .default(DEFAULT_FREE_SHIPPING_THRESHOLD_IN_CENTS),
+    STOCK_RESERVATION_TTL_MINUTES: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .default(DEFAULT_RESERVATION_TTL_MINUTES),
+    REFERENCE_PREFIX: z
+      .string()
+      .regex(/^[A-Z]{2,5}$/)
+      .default(DEFAULT_REFERENCE_PREFIX),
     // `fake` decides the payment result from the card token (local, tests and Docker only).
     PAYMENT_PROVIDER: z.enum(PAYMENT_PROVIDERS).default('fake'),
     PAYMENT_API_BASE_URL: z.url().optional(),
@@ -114,6 +126,7 @@ export interface AppConfig extends DynamoDbConnection {
   readonly tables: {
     readonly products: string;
     readonly customers: string;
+    readonly transactions: string;
     readonly idempotency: string;
   };
   readonly catalog: {
@@ -123,6 +136,10 @@ export interface AppConfig extends DynamoDbConnection {
   readonly pricing: {
     readonly serviceFeeInCents: number;
     readonly freeShippingThresholdInCents: number;
+  };
+  readonly transactions: {
+    readonly reservationTtlMinutes: number;
+    readonly referencePrefix: string;
   };
   readonly payments: PaymentsConfig;
 }
@@ -178,6 +195,7 @@ export const loadAppConfig = (env: Env): AppConfig => {
     tables: {
       products: config.TABLE_PRODUCTS,
       customers: config.TABLE_CUSTOMERS,
+      transactions: config.TABLE_TRANSACTIONS,
       idempotency: config.TABLE_IDEMPOTENCY,
     },
     catalog: {
@@ -187,6 +205,10 @@ export const loadAppConfig = (env: Env): AppConfig => {
     pricing: {
       serviceFeeInCents: config.SERVICE_FEE_IN_CENTS,
       freeShippingThresholdInCents: config.FREE_SHIPPING_THRESHOLD_IN_CENTS,
+    },
+    transactions: {
+      reservationTtlMinutes: config.STOCK_RESERVATION_TTL_MINUTES,
+      referencePrefix: config.REFERENCE_PREFIX,
     },
     payments: toPaymentsConfig(config),
   };

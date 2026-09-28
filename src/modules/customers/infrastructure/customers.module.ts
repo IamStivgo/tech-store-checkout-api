@@ -37,5 +37,6 @@ import { DynamoDbCustomerRepository } from './persistence/dynamodb-customer.repo
       useFactory: (customers: CustomerRepository) => new GetCustomer(customers),
     },
   ],
+  exports: [CUSTOMER_REPOSITORY],
 })
 export class CustomersModule {}

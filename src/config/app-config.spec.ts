@@ -5,6 +5,7 @@ const REQUIRED = {
   APP_ENV: 'local',
   TABLE_PRODUCTS: 'checkout-app-local-products',
   TABLE_CUSTOMERS: 'checkout-app-local-customers',
+  TABLE_TRANSACTIONS: 'checkout-app-local-transactions',
   TABLE_IDEMPOTENCY: 'checkout-app-local-idempotency-keys',
 };
 
@@ -23,10 +24,12 @@ describe('loadAppConfig', () => {
       tables: {
         products: 'checkout-app-local-products',
         customers: 'checkout-app-local-customers',
+        transactions: 'checkout-app-local-transactions',
         idempotency: 'checkout-app-local-idempotency-keys',
       },
       catalog: { lowStockThreshold: 3, maxUnitsPerOrder: 5 },
       pricing: { serviceFeeInCents: 300_000, freeShippingThresholdInCents: 15_000_000 },
+      transactions: { reservationTtlMinutes: 15, referencePrefix: 'CKT' },
       payments: { provider: 'fake' },
     });
   });
@@ -42,6 +45,9 @@ describe('loadAppConfig', () => {
       DYNAMODB_ENDPOINT: 'http://localhost:8000',
       TABLE_PRODUCTS: 'checkout-app-prod-products',
       TABLE_CUSTOMERS: 'checkout-app-prod-customers',
+      TABLE_TRANSACTIONS: 'checkout-app-prod-transactions',
+      STOCK_RESERVATION_TTL_MINUTES: '10',
+      REFERENCE_PREFIX: 'TST',
       TABLE_IDEMPOTENCY: 'checkout-app-prod-idempotency-keys',
       LOW_STOCK_THRESHOLD: '2',
       MAX_UNITS_PER_ORDER: '10',
@@ -66,10 +72,12 @@ describe('loadAppConfig', () => {
       tables: {
         products: 'checkout-app-prod-products',
         customers: 'checkout-app-prod-customers',
+        transactions: 'checkout-app-prod-transactions',
         idempotency: 'checkout-app-prod-idempotency-keys',
       },
       catalog: { lowStockThreshold: 2, maxUnitsPerOrder: 10 },
       pricing: { serviceFeeInCents: 250_000, freeShippingThresholdInCents: 20_000_000 },
+      transactions: { reservationTtlMinutes: 10, referencePrefix: 'TST' },
       payments: {
         provider: 'http',
         apiBaseUrl: 'https://provider.test/v1',
@@ -115,15 +123,18 @@ describe('loadAppConfig', () => {
     ]);
   });
 
-  it.each(['APP_ENV', 'TABLE_PRODUCTS', 'TABLE_CUSTOMERS', 'TABLE_IDEMPOTENCY'])(
-    'fails fast when %s is missing',
-    (variable) => {
-      const env = Object.fromEntries(Object.entries(REQUIRED).filter(([key]) => key !== variable));
+  it.each([
+    'APP_ENV',
+    'TABLE_PRODUCTS',
+    'TABLE_CUSTOMERS',
+    'TABLE_TRANSACTIONS',
+    'TABLE_IDEMPOTENCY',
+  ])('fails fast when %s is missing', (variable) => {
+    const env = Object.fromEntries(Object.entries(REQUIRED).filter(([key]) => key !== variable));
 
-      expect(() => loadAppConfig(env)).toThrow(InvalidConfigError);
-      expect(() => loadAppConfig(env)).toThrow(new RegExp(variable));
-    },
-  );
+    expect(() => loadAppConfig(env)).toThrow(InvalidConfigError);
+    expect(() => loadAppConfig(env)).toThrow(new RegExp(variable));
+  });
 
   it.each([
     ['APP_ENV', { APP_ENV: 'staging' }],
@@ -134,6 +145,8 @@ describe('loadAppConfig', () => {
     ['DYNAMODB_ENDPOINT', { DYNAMODB_ENDPOINT: 'localhost-8000' }],
     ['LOW_STOCK_THRESHOLD', { LOW_STOCK_THRESHOLD: '-1' }],
     ['MAX_UNITS_PER_ORDER', { MAX_UNITS_PER_ORDER: '0' }],
+    ['STOCK_RESERVATION_TTL_MINUTES', { STOCK_RESERVATION_TTL_MINUTES: '0' }],
+    ['REFERENCE_PREFIX', { REFERENCE_PREFIX: 'ckt-1' }],
   ])('rejects an invalid %s', (variable, overrides) => {
     expect(() => loadAppConfig({ ...REQUIRED, ...overrides })).toThrow(new RegExp(variable));
   });
@@ -148,6 +161,7 @@ describe('loadAppConfig', () => {
       'TABLE_CUSTOMERS',
       'TABLE_IDEMPOTENCY',
       'TABLE_PRODUCTS',
+      'TABLE_TRANSACTIONS',
     ]);
   });
 

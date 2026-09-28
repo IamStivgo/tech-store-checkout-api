@@ -575,6 +575,256 @@
           "Payments"
         ]
       }
+    },
+    "/api/v1/transactions": {
+      "post": {
+        "description": "The amounts are computed on the server; the stock stays reserved until reservationExpiresAt if the payment is not sent.",
+        "operationId": "transactionsCreate",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Client-generated UUID. Repeating it with the same body returns the stored response with `Idempotent-Replayed: true`; with another body, 409 IDEMPOTENCY_KEY_CONFLICT.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTransactionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "headers": {
+              "Location": {
+                "description": "URL of the transaction.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Transaction"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters.\n\nInvalid request parameters.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The resource does not exist.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with the current state or a previous request.\n\nThe request conflicts with the current state or a previous request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request breaks a business rule.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Create a PENDING transaction and reserve its stock",
+        "tags": [
+          "Transactions"
+        ]
+      }
+    },
+    "/api/v1/transactions/{transactionId}": {
+      "get": {
+        "operationId": "transactionsDetail",
+        "parameters": [
+          {
+            "name": "transactionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Transaction"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The resource does not exist.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get the current state of a transaction",
+        "tags": [
+          "Transactions"
+        ]
+      },
+      "patch": {
+        "description": "Releases the reserved stock right away. JSON Merge Patch (RFC 7396).",
+        "operationId": "transactionsUpdate",
+        "parameters": [
+          {
+            "name": "transactionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTransactionRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTransactionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Transaction"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The resource does not exist.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with the current state or a previous request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Cancel a PENDING transaction whose payment was not sent",
+        "tags": [
+          "Transactions"
+        ]
+      }
     }
   },
   "info": {
@@ -1314,6 +1564,305 @@
         "required": [
           "endUserPolicy",
           "personalDataAuth"
+        ]
+      },
+      "ShippingAddressRequest": {
+        "type": "object",
+        "properties": {
+          "recipientName": {
+            "type": "string",
+            "description": "Same rules as the customer full name.",
+            "example": "Ana María Gómez"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Colombian mobile or landline; +57 accepted.",
+            "example": "3001234567"
+          },
+          "addressLine1": {
+            "type": "string",
+            "description": "5-120 letters, digits, spaces or # - . , °",
+            "example": "Calle 100 # 10-20"
+          },
+          "addressLine2": {
+            "type": "string",
+            "maxLength": 120,
+            "example": "Apto 501, Torre 2"
+          },
+          "departmentCode": {
+            "type": "string",
+            "description": "Two-digit DIVIPOLA department code.",
+            "example": "11"
+          },
+          "cityCode": {
+            "type": "string",
+            "description": "Five-digit DIVIPOLA municipality code of that department.",
+            "example": "11001"
+          },
+          "postalCode": {
+            "type": "string",
+            "description": "Six digits.",
+            "example": "110111"
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 200,
+            "example": "Portería 24 horas"
+          }
+        },
+        "required": [
+          "recipientName",
+          "phone",
+          "addressLine1",
+          "departmentCode",
+          "cityCode"
+        ]
+      },
+      "CreateTransactionRequest": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "number",
+            "minimum": 1,
+            "example": 1,
+            "description": "Up to min(stock, units per order)."
+          },
+          "customerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "shippingAddress": {
+            "$ref": "#/components/schemas/ShippingAddressRequest"
+          }
+        },
+        "required": [
+          "productId",
+          "quantity",
+          "customerId",
+          "shippingAddress"
+        ]
+      },
+      "TransactionProduct": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "example": "TEC-CBL-USBC"
+          },
+          "name": {
+            "type": "string",
+            "example": "Cable USB-C a USB-C 2 m (100 W)"
+          }
+        },
+        "required": [
+          "id",
+          "sku",
+          "name"
+        ]
+      },
+      "TransactionAmounts": {
+        "type": "object",
+        "properties": {
+          "productAmount": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "serviceFee": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "deliveryFee": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "total": {
+            "$ref": "#/components/schemas/Money"
+          }
+        },
+        "required": [
+          "productAmount",
+          "serviceFee",
+          "deliveryFee",
+          "total"
+        ]
+      },
+      "TransactionDelivery": {
+        "type": "object",
+        "properties": {
+          "zone": {
+            "type": "string",
+            "enum": [
+              "LOCAL",
+              "METRO",
+              "NATIONAL_MAIN",
+              "NATIONAL_REGIONAL",
+              "SPECIAL_ROUTE"
+            ],
+            "example": "LOCAL"
+          },
+          "estimatedBusinessDays": {
+            "$ref": "#/components/schemas/BusinessDaysRange"
+          }
+        },
+        "required": [
+          "zone",
+          "estimatedBusinessDays"
+        ]
+      },
+      "TransactionPayment": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "nullable": true,
+            "example": "APPROVED"
+          },
+          "statusMessage": {
+            "type": "string",
+            "nullable": true,
+            "example": null
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "CARD"
+            ]
+          },
+          "cardBrand": {
+            "type": "string",
+            "nullable": true,
+            "example": "VISA"
+          },
+          "cardLastFour": {
+            "type": "string",
+            "nullable": true,
+            "example": "4242"
+          },
+          "installments": {
+            "type": "number",
+            "example": 1
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "status",
+          "statusMessage",
+          "method",
+          "cardBrand",
+          "cardLastFour",
+          "installments",
+          "submittedAt"
+        ]
+      },
+      "Transaction": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reference": {
+            "type": "string",
+            "example": "CKT-20260924-7K3M9Q2PXA"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "APPROVED",
+              "DECLINED",
+              "VOIDED",
+              "ERROR",
+              "CANCELLED",
+              "EXPIRED"
+            ],
+            "example": "PENDING"
+          },
+          "product": {
+            "$ref": "#/components/schemas/TransactionProduct"
+          },
+          "quantity": {
+            "type": "number",
+            "example": 1
+          },
+          "amounts": {
+            "$ref": "#/components/schemas/TransactionAmounts"
+          },
+          "delivery": {
+            "$ref": "#/components/schemas/TransactionDelivery"
+          },
+          "payment": {
+            "nullable": true,
+            "description": "Null until paid.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TransactionPayment"
+              }
+            ]
+          },
+          "deliveryId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Once approved."
+          },
+          "reservationExpiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Stock reserved until then if not paid."
+          },
+          "finalizedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "reference",
+          "status",
+          "product",
+          "quantity",
+          "amounts",
+          "delivery",
+          "payment",
+          "deliveryId",
+          "reservationExpiresAt",
+          "finalizedAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "UpdateTransactionRequest": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "CANCELLED"
+            ],
+            "description": "The only change allowed."
+          }
+        },
+        "required": [
+          "status"
         ]
       }
     }
