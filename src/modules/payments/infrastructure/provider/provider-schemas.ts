@@ -11,6 +11,10 @@ export const merchantResponseSchema = z.object({
   }),
 });
 
+export const tokenizationKeyResponseSchema = z.object({
+  data: z.object({ publicKey: z.string().min(1) }),
+});
+
 export const transactionSchema = z.object({
   id: z.string().min(1),
   reference: z.string(),
