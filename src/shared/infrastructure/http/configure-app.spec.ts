@@ -65,7 +65,7 @@ describe('configureApp', () => {
   it('keeps CORS disabled when no origins are configured', () => {
     const app = createAppMock();
 
-    configureApp(app as unknown as NestExpressApplication, aConfig({ APP_ENV: 'prod' }));
+    configureApp(app as unknown as NestExpressApplication, aConfig());
 
     expect(app.enableCors).not.toHaveBeenCalled();
   });
