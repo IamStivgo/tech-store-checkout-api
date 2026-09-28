@@ -1079,6 +1079,131 @@
           "Webhooks"
         ]
       }
+    },
+    "/api/v1/deliveries/{deliveryId}": {
+      "get": {
+        "operationId": "deliveriesDetail",
+        "parameters": [
+          {
+            "name": "deliveryId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Delivery"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The resource does not exist.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get a delivery, with the recipient and the address masked",
+        "tags": [
+          "Deliveries"
+        ]
+      }
+    },
+    "/api/v1/transactions/{transactionId}/delivery": {
+      "get": {
+        "description": "Only an APPROVED transaction has a delivery (404 DELIVERY_NOT_FOUND otherwise).",
+        "operationId": "deliveriesOfTransaction",
+        "parameters": [
+          {
+            "name": "transactionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Delivery"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The resource does not exist.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get the delivery of a transaction",
+        "tags": [
+          "Deliveries"
+        ]
+      }
     }
   },
   "info": {
@@ -2235,6 +2360,117 @@
         "required": [
           "received",
           "outcome"
+        ]
+      },
+      "DeliveryProduct": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "Cable USB-C a USB-C 2 m (100 W)"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "DeliveryAddress": {
+        "type": "object",
+        "properties": {
+          "addressLine1": {
+            "type": "string",
+            "description": "First 10 characters only.",
+            "example": "Calle 100 …"
+          },
+          "cityName": {
+            "type": "string",
+            "example": "Bogotá, D.C."
+          },
+          "departmentName": {
+            "type": "string",
+            "example": "Bogotá, D.C."
+          }
+        },
+        "required": [
+          "addressLine1",
+          "cityName",
+          "departmentName"
+        ]
+      },
+      "Delivery": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "transactionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ASSIGNED"
+            ],
+            "example": "ASSIGNED"
+          },
+          "product": {
+            "$ref": "#/components/schemas/DeliveryProduct"
+          },
+          "quantity": {
+            "type": "number",
+            "example": 1
+          },
+          "recipientName": {
+            "type": "string",
+            "description": "Masked: first name and initials.",
+            "example": "Ana M. G."
+          },
+          "address": {
+            "$ref": "#/components/schemas/DeliveryAddress"
+          },
+          "zone": {
+            "type": "string",
+            "enum": [
+              "LOCAL",
+              "METRO",
+              "NATIONAL_MAIN",
+              "NATIONAL_REGIONAL",
+              "SPECIAL_ROUTE"
+            ],
+            "example": "LOCAL"
+          },
+          "deliveryFee": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "estimatedDeliveryDate": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-09-25"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "transactionId",
+          "status",
+          "product",
+          "quantity",
+          "recipientName",
+          "address",
+          "zone",
+          "deliveryFee",
+          "estimatedDeliveryDate",
+          "createdAt"
         ]
       }
     }

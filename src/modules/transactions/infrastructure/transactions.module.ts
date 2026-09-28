@@ -207,6 +207,6 @@ const TRANSACTION_SYNC_INTERVAL_MS = 2000;
         }),
     },
   ],
-  exports: [ReconcileTransactions],
+  exports: [ReconcileTransactions, TRANSACTION_REPOSITORY],
 })
 export class TransactionsModule {}
