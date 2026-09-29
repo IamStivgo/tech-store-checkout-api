@@ -177,14 +177,15 @@ DELIVERY_ASSIGNED    SHORT_POLL    deliveryId
 - Datos personales enmascarados en las respuestas y nunca en los logs (pino con redacción).
 - Webhook firmado; eventos de otro ambiente o referencias desconocidas se ignoran con 200.
 - Throttling por ruta en API Gateway para crear transacciones, pagar y el webhook (repositorio de infraestructura).
+- Solo se atienden peticiones que llegan por CloudFront: el CDN agrega el header `x-origin-verify` con un secreto compartido (comparado en tiempo constante) y una llamada directa a API Gateway recibe 403. En local, sin CDN, el secreto no se configura.
 
 ## Pruebas y cobertura
 
 | Statements | Branches | Functions | Lines   |
 | ---------- | -------- | --------- | ------- |
-| 99,39 %    | 89,89 %  | 98,69 %   | 99,71 % |
+| 98,75 %    | 89,11 %  | 97,38 %   | 99,05 % |
 
-Medido el 2026-09-28 con `npm test` (680 pruebas en 90 suites) sobre la versión `0.4.0`. Umbrales del CI: 85 % en statements, lines y functions y 81 % en branches. Incluye pruebas unitarias del dominio y los casos de uso (repositorios en memoria, reloj y pasarela falsos), pruebas HTTP con supertest de todos los endpoints y pruebas de humo del bundle de Lambda (`npm run test:artifacts`). El flujo completo se verificó en producción con las tarjetas del sandbox: 4242 → `APPROVED` con entrega asignada y 4111 → `DECLINED`.
+Medido el 2026-09-29 con `npm test` (697 pruebas en 94 suites) sobre la versión `1.1.1`. Umbrales del CI: 85 % en statements, lines y functions y 81 % en branches. Incluye pruebas unitarias del dominio y los casos de uso (repositorios en memoria, reloj y pasarela falsos), pruebas HTTP con supertest de todos los endpoints y pruebas de humo del bundle de Lambda (`npm run test:artifacts`). El flujo completo se verificó en producción con las tarjetas del sandbox: 4242 → `APPROVED` con entrega asignada y 4111 → `DECLINED`.
 
 ## Stack
 
