@@ -2,6 +2,7 @@ import type { MoneyJson } from '../../../../shared/domain/money.vo';
 import type { BusinessDaysRange } from '../../../coverage/domain/delivery-zone.vo';
 import type { ZoneCode } from '../../../coverage/domain/zone-code';
 import type { CheckoutQuote } from '../../application/quote-checkout.use-case';
+import type { IncludedVatJson } from '../../domain/included-vat.vo';
 
 export interface DeliveryQuoteResponse {
   readonly zone: ZoneCode;
@@ -16,6 +17,7 @@ export interface QuoteResponse {
   readonly quantity: number;
   readonly unitPrice: MoneyJson;
   readonly productAmount: MoneyJson;
+  readonly vat: IncludedVatJson;
   readonly serviceFee: MoneyJson;
   readonly deliveryFee: MoneyJson;
   readonly total: MoneyJson;
@@ -28,6 +30,7 @@ export const toQuoteResponse = (quote: CheckoutQuote): QuoteResponse => ({
   quantity: quote.quantity,
   unitPrice: quote.unitPrice.toJSON(),
   productAmount: quote.productAmount.toJSON(),
+  vat: quote.vat.toJSON(),
   serviceFee: quote.serviceFee.toJSON(),
   deliveryFee: quote.deliveryFee.toJSON(),
   total: quote.total.toJSON(),

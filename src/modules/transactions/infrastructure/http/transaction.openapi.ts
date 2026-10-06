@@ -3,7 +3,10 @@ import { ApiProperty, ApiPropertyOptional, ApiSchema } from '@nestjs/swagger';
 import { MoneySchema } from '../../../../shared/infrastructure/http/openapi/common.openapi';
 import type { BusinessDaysRange } from '../../../coverage/domain/delivery-zone.vo';
 import { ZONE_CODES, type ZoneCode } from '../../../coverage/domain/zone-code';
-import { BusinessDaysRangeSchema } from '../../../pricing/infrastructure/http/quote.openapi';
+import {
+  BusinessDaysRangeSchema,
+  VatSchema,
+} from '../../../pricing/infrastructure/http/quote.openapi';
 import { TRANSACTION_STATUSES, type TransactionStatus } from '../../domain/transaction-status';
 
 import type { TransactionPaymentResponse, TransactionResponse } from './transaction.response';
@@ -110,6 +113,14 @@ export class TransactionAmountsSchema {
 
   @ApiProperty({ type: MoneySchema })
   readonly total!: MoneySchema;
+
+  @ApiProperty({
+    type: VatSchema,
+    nullable: true,
+    description:
+      'VAT included in productAmount, frozen when the transaction was created. Null for transactions created before it was recorded.',
+  })
+  readonly vat!: VatSchema | null;
 }
 
 @ApiSchema({ name: 'TransactionDelivery' })

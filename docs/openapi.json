@@ -1272,7 +1272,7 @@
   "info": {
     "title": "Tech Store Checkout API",
     "description": "Catalog, delivery coverage and checkout of a tech accessories store. Errors follow RFC 9457 Problem Details.",
-    "version": "1.1.1",
+    "version": "1.2.0",
     "contact": {}
   },
   "tags": [],
@@ -1741,6 +1741,37 @@
           "meta"
         ]
       },
+      "Vat": {
+        "type": "object",
+        "properties": {
+          "ratePercent": {
+            "type": "number",
+            "description": "VAT rate in percent.",
+            "example": 19
+          },
+          "base": {
+            "description": "Product amount without VAT.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              }
+            ]
+          },
+          "amount": {
+            "description": "VAT included in the product amount.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              }
+            ]
+          }
+        },
+        "required": [
+          "ratePercent",
+          "base",
+          "amount"
+        ]
+      },
       "BusinessDaysRange": {
         "type": "object",
         "properties": {
@@ -1828,6 +1859,14 @@
               }
             ]
           },
+          "vat": {
+            "description": "VAT included in productAmount; service and delivery fees carry none.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Vat"
+              }
+            ]
+          },
           "serviceFee": {
             "description": "Fixed fee per order.",
             "allOf": [
@@ -1865,6 +1904,7 @@
           "quantity",
           "unitPrice",
           "productAmount",
+          "vat",
           "serviceFee",
           "deliveryFee",
           "total",
@@ -2137,13 +2177,24 @@
           },
           "total": {
             "$ref": "#/components/schemas/Money"
+          },
+          "vat": {
+            "nullable": true,
+            "description": "VAT included in productAmount, frozen when the transaction was created. Null for transactions created before it was recorded.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Vat"
+              }
+            ]
           }
         },
         "required": [
           "productAmount",
           "serviceFee",
           "deliveryFee",
-          "total"
+          "total",
+          "vat"
         ]
       },
       "TransactionDelivery": {

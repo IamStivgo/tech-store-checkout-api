@@ -34,6 +34,7 @@ describe('transaction mapper', () => {
         deliveryFeeInCents: 800_000,
         totalInCents: 5_090_000,
         currency: 'COP',
+        vat: { ratePercent: 19, baseInCents: 3_352_900, amountInCents: 637_100 },
       },
       zoneCode: 'LOCAL',
       pendingBucket: 'PENDING',
@@ -85,6 +86,16 @@ describe('transaction mapper', () => {
     expect(toTransactionItem(restored)).toEqual(toTransactionItem(transaction));
   });
 
+  it('reads a transaction stored before the VAT was recorded with a null VAT', () => {
+    const item = toTransactionItem(aTransaction());
+    const legacyAmounts = { ...(item.amounts as Record<string, unknown>), vat: undefined };
+
+    const restored = unwrap(toTransaction({ ...item, amounts: legacyAmounts }));
+
+    expect(restored.amounts.vat).toBeNull();
+    expect(toTransactionItem(restored).amounts).toEqual(legacyAmounts);
+  });
+
   it.each([
     ['a missing attribute', { reference: undefined }],
     ['an unknown status', { status: 'LOST' }],
@@ -94,6 +105,24 @@ describe('transaction mapper', () => {
         shippingAddress: {
           ...(toTransactionItem(aTransaction()).shippingAddress as object),
           cityCode: '1',
+        },
+      },
+    ],
+    [
+      'a VAT that does not add up to the product amount',
+      {
+        amounts: {
+          ...(toTransactionItem(aTransaction()).amounts as object),
+          vat: { ratePercent: 19, baseInCents: 3_352_900, amountInCents: 1 },
+        },
+      },
+    ],
+    [
+      'an invalid VAT rate',
+      {
+        amounts: {
+          ...(toTransactionItem(aTransaction()).amounts as object),
+          vat: { ratePercent: 101, baseInCents: 3_352_900, amountInCents: 637_100 },
         },
       },
     ],

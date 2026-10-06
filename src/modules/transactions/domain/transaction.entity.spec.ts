@@ -1,4 +1,5 @@
 import { cop } from '../../../../test/builders/pricing.builder';
+import { aProviderPayment } from '../../../../test/builders/provider-payment.builder';
 import {
   aNewTransaction,
   aStoredTransaction,
@@ -7,6 +8,7 @@ import {
   TRANSACTION_CREATED_AT,
 } from '../../../../test/builders/transaction.builder';
 import { unwrap } from '../../../../test/builders/unwrap';
+import { IncludedVat } from '../../pricing/domain/included-vat.vo';
 
 import { isFinalStatus, TRANSACTION_STATUSES } from './transaction-status';
 import { Transaction } from './transaction.entity';
@@ -58,6 +60,51 @@ describe('Transaction', () => {
     );
 
     expect(result.isErr && result.error.fieldErrors[0]?.field).toBe('amounts');
+  });
+
+  describe('VAT', () => {
+    const vatOf = (transaction: Transaction) => transaction.amounts.vat?.toJSON();
+
+    it('keeps the VAT of the product amount without adding it to the total', () => {
+      const { amounts } = aTransaction();
+
+      expect(vatOf(aTransaction())).toEqual({
+        ratePercent: 19,
+        base: cop(33_529).toJSON(),
+        amount: cop(6_371).toJSON(),
+      });
+      expect(amounts.total).toEqual(cop(50_900));
+    });
+
+    it('rejects a transaction without VAT', () => {
+      const result = Transaction.create(
+        aNewTransaction({ amounts: { ...aNewTransaction().amounts, vat: null } }),
+        RESERVATION_TTL_MINUTES,
+      );
+
+      expect(result.isErr && result.error.fieldErrors[0]?.field).toBe('amounts.vat');
+    });
+
+    it('rejects a VAT that does not add up to the product amount', () => {
+      const other = unwrap(IncludedVat.fromGross(cop(10_000), 19));
+      const result = Transaction.create(
+        aNewTransaction({ amounts: { ...aNewTransaction().amounts, vat: other } }),
+        RESERVATION_TTL_MINUTES,
+      );
+
+      expect(result.isErr && result.error.fieldErrors[0]?.field).toBe('amounts.vat');
+    });
+
+    it('never changes through the life of the transaction', () => {
+      const created = aTransaction();
+      const claimed = created.claimPayment('attempt-1', 1, TRANSACTION_CREATED_AT);
+      const settled = claimed.settle(aProviderPayment(), TRANSACTION_CREATED_AT, 'delivery-1');
+
+      expect(vatOf(claimed)).toEqual(vatOf(created));
+      expect(settled.kind === 'settled' && vatOf(settled.transaction)).toEqual(vatOf(created));
+      expect(vatOf(unwrap(created.cancel(TRANSACTION_CREATED_AT)))).toEqual(vatOf(created));
+      expect(created.expire(created.reservationExpiresAt)?.amounts.vat).toBe(created.amounts.vat);
+    });
   });
 
   describe('expire', () => {

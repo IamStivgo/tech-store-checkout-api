@@ -21,7 +21,12 @@ describe('transaction events', () => {
     const events = creationEvents(aTransaction(), 'CHECKOUT_API');
 
     expect(events).toMatchObject([
-      { type: 'TRANSACTION_CREATED', toStatus: 'PENDING', amountInCents: 5_090_000 },
+      {
+        type: 'TRANSACTION_CREATED',
+        toStatus: 'PENDING',
+        amountInCents: 5_090_000,
+        details: { vatRatePercent: 19, vatBaseInCents: 3_352_900, vatAmountInCents: 637_100 },
+      },
       { type: 'STOCK_RESERVED', details: { quantity: 1 } },
     ]);
   });

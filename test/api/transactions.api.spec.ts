@@ -92,6 +92,7 @@ describe('Transactions API', () => {
           serviceFee: cents(3_000),
           deliveryFee: cents(8_000),
           total: cents(50_900),
+          vat: { ratePercent: 19, base: cents(33_529), amount: cents(6_371) },
         },
         delivery: { zone: 'LOCAL', estimatedBusinessDays: { min: 1, max: 1 } },
         payment: null,

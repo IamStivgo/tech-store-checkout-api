@@ -7,4 +7,6 @@ export interface PricingPolicy {
   readonly freeShippingThreshold: Money;
   /** Weight covered by a zone's base rate; each extra kilogram is charged (BR-04). */
   readonly includedWeightKg: number;
+  /** VAT included in product prices; service and delivery fees carry none (BR-16). */
+  readonly vatRatePercent: number;
 }

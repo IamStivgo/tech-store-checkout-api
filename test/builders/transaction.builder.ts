@@ -1,3 +1,4 @@
+import { IncludedVat } from '../../src/modules/pricing/domain/included-vat.vo';
 import {
   ShippingAddress,
   type ShippingAddressData,
@@ -53,6 +54,7 @@ export const aNewTransaction = (
     serviceFee: cop(3_000),
     deliveryFee: cop(8_000),
     total: cop(50_900),
+    vat: unwrap(IncludedVat.fromGross(cop(39_900), 19)),
   },
   delivery: { zone: 'LOCAL', billableWeightKg: 1, estimatedBusinessDays: { min: 1, max: 1 } },
   createdAt: TRANSACTION_CREATED_AT,
