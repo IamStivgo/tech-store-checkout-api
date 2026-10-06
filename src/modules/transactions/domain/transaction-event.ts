@@ -61,6 +61,17 @@ const providerFields = ({ payment }: Transaction): Partial<TransactionEvent> => 
   ...(payment?.providerStatus ? { providerStatus: payment.providerStatus } : {}),
 });
 
+const vatDetails = ({ amounts }: Transaction): Partial<TransactionEvent> =>
+  amounts.vat
+    ? {
+        details: {
+          vatRatePercent: amounts.vat.ratePercent,
+          vatBaseInCents: amounts.vat.base.amountInCents,
+          vatAmountInCents: amounts.vat.amount.amountInCents,
+        },
+      }
+    : {};
+
 /** A new PENDING transaction and the units it reserved. */
 export const creationEvents = (
   transaction: Transaction,
@@ -69,6 +80,7 @@ export const creationEvents = (
   event(transaction, 'TRANSACTION_CREATED', source, transaction.createdAt, {
     toStatus: transaction.status,
     amountInCents: transaction.amounts.total.amountInCents,
+    ...vatDetails(transaction),
   }),
   event(transaction, 'STOCK_RESERVED', source, transaction.createdAt, {
     details: { quantity: transaction.quantity },

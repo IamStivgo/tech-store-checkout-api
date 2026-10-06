@@ -1,6 +1,7 @@
 import type { MoneyJson } from '../../../../shared/domain/money.vo';
 import type { BusinessDaysRange } from '../../../coverage/domain/delivery-zone.vo';
 import type { ZoneCode } from '../../../coverage/domain/zone-code';
+import type { IncludedVatJson } from '../../../pricing/domain/included-vat.vo';
 import type { TransactionStatus } from '../../domain/transaction-status';
 import type { Transaction } from '../../domain/transaction.entity';
 
@@ -26,6 +27,8 @@ export interface TransactionResponse {
     readonly serviceFee: MoneyJson;
     readonly deliveryFee: MoneyJson;
     readonly total: MoneyJson;
+    /** Null for transactions created before the VAT was recorded. */
+    readonly vat: IncludedVatJson | null;
   };
   readonly delivery: { readonly zone: ZoneCode; readonly estimatedBusinessDays: BusinessDaysRange };
   readonly payment: TransactionPaymentResponse | null;
@@ -53,6 +56,7 @@ export const toTransactionResponse = (transaction: Transaction): TransactionResp
       serviceFee: amounts.serviceFee.toJSON(),
       deliveryFee: amounts.deliveryFee.toJSON(),
       total: amounts.total.toJSON(),
+      vat: amounts.vat?.toJSON() ?? null,
     },
     delivery: {
       zone: transaction.delivery.zone,

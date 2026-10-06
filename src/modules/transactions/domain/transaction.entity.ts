@@ -4,6 +4,7 @@ import { ValidationError } from '../../../shared/domain/validation-error';
 import type { BusinessDaysRange } from '../../coverage/domain/delivery-zone.vo';
 import type { ZoneCode } from '../../coverage/domain/zone-code';
 import type { ProviderPayment } from '../../payments/domain/provider-payment';
+import type { IncludedVat } from '../../pricing/domain/included-vat.vo';
 
 import type { ShippingAddress } from './shipping-address.vo';
 import { isFinalStatus, type TransactionStatus } from './transaction-status';
@@ -26,6 +27,8 @@ export interface TransactionAmounts {
   readonly serviceFee: Money;
   readonly deliveryFee: Money;
   readonly total: Money;
+  /** Frozen at purchase time; null only for transactions created before VAT was recorded. */
+  readonly vat: IncludedVat | null;
 }
 
 export interface TransactionDelivery {
@@ -83,6 +86,7 @@ export type Settlement =
 const MS_PER_MINUTE = 60_000;
 const MISMATCH_MESSAGE = 'The payment result does not match the transaction';
 
+// The VAT is already inside productAmount, so it is not a charge of its own.
 const addsUp = ({ productAmount, serviceFee, deliveryFee, total }: TransactionAmounts): boolean =>
   productAmount.add(serviceFee).add(deliveryFee).equals(total);
 
@@ -99,6 +103,9 @@ export class Transaction {
     }
     if (!addsUp(props.amounts)) {
       return err(ValidationError.forField('amounts', 'total must be the sum of the charges'));
+    }
+    if (!props.amounts.vat?.gross().equals(props.amounts.productAmount)) {
+      return err(ValidationError.forField('amounts.vat', 'vat must add up to the product amount'));
     }
     return ok(
       new Transaction({
