@@ -130,6 +130,7 @@ export class CreateTransaction {
           shippingAddress,
           amounts: {
             productAmount: breakdown.productAmount,
+            vat: breakdown.vat,
             serviceFee: breakdown.serviceFee,
             deliveryFee: breakdown.deliveryFee,
             total: breakdown.total,

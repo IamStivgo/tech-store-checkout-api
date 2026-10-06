@@ -3,7 +3,9 @@ import { z } from 'zod';
 import { Money } from '../../../../shared/domain/money.vo';
 import { PersistenceError } from '../../../../shared/domain/persistence-error';
 import { err, ok, type Result } from '../../../../shared/domain/result';
+import { ValidationError } from '../../../../shared/domain/validation-error';
 import { ZONE_CODES } from '../../../coverage/domain/zone-code';
+import { IncludedVat } from '../../../pricing/domain/included-vat.vo';
 import { ShippingAddress } from '../../domain/shipping-address.vo';
 import { TRANSACTION_STATUSES } from '../../domain/transaction-status';
 import { Transaction } from '../../domain/transaction.entity';
@@ -43,6 +45,13 @@ const itemSchema = z.object({
     deliveryFeeInCents: z.number(),
     totalInCents: z.number(),
     currency: z.string(),
+    vat: z
+      .object({
+        ratePercent: z.number(),
+        baseInCents: z.number(),
+        amountInCents: z.number(),
+      })
+      .nullish(),
   }),
   zoneCode: z.enum(ZONE_CODES),
   billableWeightKg: z.number(),
@@ -108,6 +117,13 @@ export const toTransactionItem = (transaction: Transaction): Record<string, unkn
       deliveryFeeInCents: amounts.deliveryFee.amountInCents,
       totalInCents: amounts.total.amountInCents,
       currency: amounts.total.currency,
+      vat: amounts.vat
+        ? {
+            ratePercent: amounts.vat.ratePercent,
+            baseInCents: amounts.vat.base.amountInCents,
+            amountInCents: amounts.vat.amount.amountInCents,
+          }
+        : undefined,
     },
     zoneCode: delivery.zone,
     billableWeightKg: delivery.billableWeightKg,
@@ -123,17 +139,42 @@ export const toTransactionItem = (transaction: Transaction): Record<string, unkn
   };
 };
 
+const toVat = (
+  amounts: Item['amounts'],
+  productAmount: Money,
+): Result<IncludedVat | null, ValidationError> => {
+  const { vat } = amounts;
+  if (!vat) {
+    return ok(null);
+  }
+  const money = (cents: number) => Money.create(cents, amounts.currency);
+  return money(vat.baseInCents)
+    .andThen((base) =>
+      money(vat.amountInCents).andThen((amount) =>
+        IncludedVat.create(vat.ratePercent, base, amount),
+      ),
+    )
+    .andThen((included) =>
+      included.gross().equals(productAmount)
+        ? ok(included)
+        : err(ValidationError.forField('amounts.vat', 'vat must add up to the product amount')),
+    );
+};
+
 const toAmounts = (amounts: Item['amounts']) => {
   const money = (cents: number) => Money.create(cents, amounts.currency);
   return money(amounts.productAmountInCents).andThen((productAmount) =>
     money(amounts.serviceFeeInCents).andThen((serviceFee) =>
       money(amounts.deliveryFeeInCents).andThen((deliveryFee) =>
-        money(amounts.totalInCents).map((total) => ({
-          productAmount,
-          serviceFee,
-          deliveryFee,
-          total,
-        })),
+        money(amounts.totalInCents).andThen((total) =>
+          toVat(amounts, productAmount).map((vat) => ({
+            productAmount,
+            serviceFee,
+            deliveryFee,
+            total,
+            vat,
+          })),
+        ),
       ),
     ),
   );

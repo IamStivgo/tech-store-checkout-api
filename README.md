@@ -104,6 +104,7 @@ erDiagram
     string reference "GSI reference-index"
     string status
     number totalInCents
+    number vatAmountInCents "IVA incluido en el producto"
     string reservationExpiresAt
     string pendingBucket "GSI pending-index (disperso)"
   }
@@ -129,7 +130,8 @@ erDiagram
 ## Reglas de negocio
 
 - Todos los montos son enteros en centavos (COP) y se calculan en el servidor; el total del web es informativo.
-- Tarifa de servicio: $ 3.000 por compra.
+- Tarifa de servicio: $ 3.000 por compra, sin IVA.
+- IVA: el precio del producto ya incluye el 19 % (`VAT_RATE_PERCENT`); el IVA se extrae, no se suma: `valor sin IVA = round(productos / 1,19)` en pesos enteros e `IVA = productos − valor sin IVA`. Se calcula sobre el monto de la línea (precio × cantidad) y solo aplica a los productos. La transacción lo guarda congelado (`amounts.vat`: tasa, valor sin IVA e IVA), así que un cambio posterior de la tasa no altera las compras anteriores. Las transacciones creadas antes de la v1.2.0 devuelven `vat: null`; no se rellenan con un cálculo retroactivo.
 - Envío por zona del municipio de destino, con 3 kg incluidos y un valor por kg adicional:
 
 | Zona              | Base     | Kg adicional | Días hábiles |
@@ -157,13 +159,13 @@ Las llaves privadas y los secretos viven en SSM Parameter Store (SecureString) y
 
 Cada cambio de una transacción deja eventos inmutables en `transaction-events`, escritos en **la misma operación atómica** (`TransactWriteItems`) que el cambio que describen: o se guardan el estado y sus eventos, o ninguno.
 
-- **Tipos:** `TRANSACTION_CREATED`, `STOCK_RESERVED`, `PAYMENT_SUBMITTED`, `PAYMENT_CLAIM_RELEASED`, `STATUS_CHANGED`, `STOCK_CONFIRMED`, `STOCK_RELEASED`, `DELIVERY_ASSIGNED`, `WEBHOOK_RECEIVED` y `RESULT_MISMATCH`.
+- **Tipos:** `TRANSACTION_CREATED` (con el IVA en `details`), `STOCK_RESERVED`, `PAYMENT_SUBMITTED`, `PAYMENT_CLAIM_RELEASED`, `STATUS_CHANGED`, `STOCK_CONFIRMED`, `STOCK_RELEASED`, `DELIVERY_ASSIGNED`, `WEBHOOK_RECEIVED` y `RESULT_MISMATCH`.
 - **Origen (`source`):** qué camino causó el evento: `CHECKOUT_API`, `SHORT_POLL` (la respuesta del pago), `STATUS_SYNC`, `WEBHOOK` o `RECONCILIATION`, con el `requestId` para cruzarlo con los logs.
 - **Inmutable:** los eventos se agregan con escrituras condicionales y las Lambdas no tienen permisos para modificarlos ni borrarlos; nunca guardan datos personales ni tokens.
 - `GET /api/v1/transactions/{id}/events` devuelve la línea de tiempo, por ejemplo de una compra aprobada:
 
 ```text
-TRANSACTION_CREATED  CHECKOUT_API  → PENDING, $ 50.900
+TRANSACTION_CREATED  CHECKOUT_API  → PENDING, $ 50.900 (IVA 19 %: $ 6.371)
 STOCK_RESERVED       CHECKOUT_API  quantity 1
 PAYMENT_SUBMITTED    CHECKOUT_API  proveedor PENDING
 STATUS_CHANGED       SHORT_POLL    PENDING → APPROVED

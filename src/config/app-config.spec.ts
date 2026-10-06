@@ -33,7 +33,11 @@ describe('loadAppConfig', () => {
         idempotency: 'checkout-app-local-idempotency-keys',
       },
       catalog: { lowStockThreshold: 3, maxUnitsPerOrder: 5 },
-      pricing: { serviceFeeInCents: 300_000, freeShippingThresholdInCents: 15_000_000 },
+      pricing: {
+        serviceFeeInCents: 300_000,
+        freeShippingThresholdInCents: 15_000_000,
+        vatRatePercent: 19,
+      },
       transactions: { reservationTtlMinutes: 15, referencePrefix: 'CKT' },
       payments: { provider: 'fake' },
     });
@@ -60,6 +64,7 @@ describe('loadAppConfig', () => {
       MAX_UNITS_PER_ORDER: '10',
       SERVICE_FEE_IN_CENTS: '250000',
       FREE_SHIPPING_THRESHOLD_IN_CENTS: '20000000',
+      VAT_RATE_PERCENT: '5',
       PAYMENT_PROVIDER: 'http',
       PAYMENT_API_BASE_URL: 'https://provider.test/v1',
       PAYMENT_PUBLIC_KEY: 'pub_test_key',
@@ -88,7 +93,11 @@ describe('loadAppConfig', () => {
         idempotency: 'checkout-app-prod-idempotency-keys',
       },
       catalog: { lowStockThreshold: 2, maxUnitsPerOrder: 10 },
-      pricing: { serviceFeeInCents: 250_000, freeShippingThresholdInCents: 20_000_000 },
+      pricing: {
+        serviceFeeInCents: 250_000,
+        freeShippingThresholdInCents: 20_000_000,
+        vatRatePercent: 5,
+      },
       transactions: { reservationTtlMinutes: 10, referencePrefix: 'TST' },
       payments: {
         provider: 'http',
@@ -164,6 +173,9 @@ describe('loadAppConfig', () => {
     ['DYNAMODB_ENDPOINT', { DYNAMODB_ENDPOINT: 'localhost-8000' }],
     ['LOW_STOCK_THRESHOLD', { LOW_STOCK_THRESHOLD: '-1' }],
     ['MAX_UNITS_PER_ORDER', { MAX_UNITS_PER_ORDER: '0' }],
+    ['VAT_RATE_PERCENT', { VAT_RATE_PERCENT: '-1' }],
+    ['VAT_RATE_PERCENT', { VAT_RATE_PERCENT: '101' }],
+    ['VAT_RATE_PERCENT', { VAT_RATE_PERCENT: '19.5' }],
     ['STOCK_RESERVATION_TTL_MINUTES', { STOCK_RESERVATION_TTL_MINUTES: '0' }],
     ['REFERENCE_PREFIX', { REFERENCE_PREFIX: 'ckt-1' }],
   ])('rejects an invalid %s', (variable, overrides) => {

@@ -39,6 +39,7 @@ const toMoney = (amountInCents: number): Money =>
           serviceFee: toMoney(config.pricing.serviceFeeInCents),
           freeShippingThreshold: toMoney(config.pricing.freeShippingThresholdInCents),
           includedWeightKg: coverage.includedWeightKg,
+          vatRatePercent: config.pricing.vatRatePercent,
         };
         return new CheckoutPricingService(policy, new DeliveryFeeCalculator(policy));
       },
