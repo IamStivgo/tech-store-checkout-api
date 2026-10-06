@@ -78,6 +78,12 @@ describe('CreateTransaction', () => {
       serviceFee: cop(3_000),
       deliveryFee: cop(8_000),
       total: cop(50_900),
+      vat: transaction.amounts.vat,
+    });
+    expect(transaction.amounts.vat?.toJSON()).toEqual({
+      ratePercent: 19,
+      base: cop(33_529).toJSON(),
+      amount: cop(6_371).toJSON(),
     });
     expect(transaction.delivery).toEqual({
       zone: 'LOCAL',

@@ -2177,13 +2177,24 @@
           },
           "total": {
             "$ref": "#/components/schemas/Money"
+          },
+          "vat": {
+            "nullable": true,
+            "description": "VAT included in productAmount, frozen when the transaction was created. Null for transactions created before it was recorded.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Vat"
+              }
+            ]
           }
         },
         "required": [
           "productAmount",
           "serviceFee",
           "deliveryFee",
-          "total"
+          "total",
+          "vat"
         ]
       },
       "TransactionDelivery": {
