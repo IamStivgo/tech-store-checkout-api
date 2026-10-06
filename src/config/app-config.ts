@@ -12,6 +12,9 @@ const DEFAULT_MAX_UNITS_PER_ORDER = 5;
 // Business rules §7: COP 3.000 service fee and free shipping from COP 150.000, in cents.
 const DEFAULT_SERVICE_FEE_IN_CENTS = 300_000;
 const DEFAULT_FREE_SHIPPING_THRESHOLD_IN_CENTS = 15_000_000;
+const MAX_VAT_RATE_PERCENT = 100;
+// Business rules BR-16: VAT included in product prices.
+const DEFAULT_VAT_RATE_PERCENT = 19;
 const PAYMENT_PROVIDERS = ['http', 'fake'] as const;
 const DEFAULT_RESERVATION_TTL_MINUTES = 15;
 const DEFAULT_REFERENCE_PREFIX = 'CKT';
@@ -54,6 +57,12 @@ const appConfigSchema = dynamoDbConnectionSchema
       .int()
       .min(0)
       .default(DEFAULT_FREE_SHIPPING_THRESHOLD_IN_CENTS),
+    VAT_RATE_PERCENT: z.coerce
+      .number()
+      .int()
+      .min(0)
+      .max(MAX_VAT_RATE_PERCENT)
+      .default(DEFAULT_VAT_RATE_PERCENT),
     STOCK_RESERVATION_TTL_MINUTES: z.coerce
       .number()
       .int()
@@ -153,6 +162,7 @@ export interface AppConfig extends DynamoDbConnection {
   readonly pricing: {
     readonly serviceFeeInCents: number;
     readonly freeShippingThresholdInCents: number;
+    readonly vatRatePercent: number;
   };
   readonly transactions: {
     readonly reservationTtlMinutes: number;
@@ -230,6 +240,7 @@ export const loadAppConfig = (env: Env): AppConfig => {
     pricing: {
       serviceFeeInCents: config.SERVICE_FEE_IN_CENTS,
       freeShippingThresholdInCents: config.FREE_SHIPPING_THRESHOLD_IN_CENTS,
+      vatRatePercent: config.VAT_RATE_PERCENT,
     },
     transactions: {
       reservationTtlMinutes: config.STOCK_RESERVATION_TTL_MINUTES,

@@ -33,5 +33,6 @@ export const aPricingPolicy = (overrides: Partial<PricingPolicy> = {}): PricingP
   serviceFee: cop(3_000),
   freeShippingThreshold: cop(150_000),
   includedWeightKg: 3,
+  vatRatePercent: 19,
   ...overrides,
 });

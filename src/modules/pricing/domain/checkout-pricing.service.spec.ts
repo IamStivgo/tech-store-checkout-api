@@ -37,6 +37,41 @@ describe('CheckoutPricingService', () => {
     },
   );
 
+  // VAT is extracted from the product amount only: fees carry none and the total is unchanged.
+  it.each<[string, number, number, number, number, number, number]>([
+    ['E1 cable to Bogotá', 39_900, 1, 33_529, 6_371, 8_000, 50_900],
+    ['one mouse to Bogotá', 119_900, 1, 100_756, 19_144, 8_000, 130_900],
+    ['E3 two mice to Cali (free shipping)', 119_900, 2, 201_513, 38_287, 0, 242_800],
+    ['one hub to Bogotá', 149_900, 1, 125_966, 23_934, 8_000, 160_900],
+  ])('%s: VAT only on the products', (_example, price, quantity, base, vat, deliveryFee, total) => {
+    const zone = deliveryFee === 0 ? 'NATIONAL_MAIN' : 'LOCAL';
+    const breakdown = unwrap(
+      pricing.quote({ price: cop(price), weightGrams: 150 }, quantity, aZone(zone)),
+    );
+
+    expect(breakdown.vat.toJSON()).toEqual({
+      ratePercent: 19,
+      base: cop(base).toJSON(),
+      amount: cop(vat).toJSON(),
+    });
+    expect(breakdown.vat.gross()).toEqual(breakdown.productAmount);
+    expect(breakdown.serviceFee).toEqual(cop(3_000));
+    expect(breakdown.deliveryFee).toEqual(cop(deliveryFee));
+    expect(breakdown.total).toEqual(cop(total));
+  });
+
+  it('uses the VAT rate of the policy', () => {
+    const noVatPolicy = aPricingPolicy({ vatRatePercent: 0 });
+    const noVat = new CheckoutPricingService(noVatPolicy, new DeliveryFeeCalculator(noVatPolicy));
+
+    const breakdown = unwrap(
+      noVat.quote({ price: cop(39_900), weightGrams: 150 }, 1, aZone('LOCAL')),
+    );
+
+    expect(breakdown.vat.amount).toEqual(cop(0));
+    expect(breakdown.total).toEqual(cop(50_900));
+  });
+
   it('reports the threshold and the estimated delivery days of the zone', () => {
     const breakdown = unwrap(
       pricing.quote({ price: cop(39_900), weightGrams: 150 }, 1, aZone('NATIONAL_REGIONAL')),

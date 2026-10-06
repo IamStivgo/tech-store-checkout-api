@@ -87,6 +87,7 @@ describe('Checkout quote API', () => {
       quantity: 1,
       unitPrice: cents(139_900),
       productAmount: cents(139_900),
+      vat: { ratePercent: 19, base: cents(117_563), amount: cents(22_337) },
       serviceFee: cents(3_000),
       deliveryFee: cents(17_500),
       total: cents(160_400),

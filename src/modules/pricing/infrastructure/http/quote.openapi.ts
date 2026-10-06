@@ -3,6 +3,7 @@ import { ApiProperty, ApiSchema } from '@nestjs/swagger';
 import { MoneySchema } from '../../../../shared/infrastructure/http/openapi/common.openapi';
 import type { BusinessDaysRange } from '../../../coverage/domain/delivery-zone.vo';
 import { ZONE_CODES, type ZoneCode } from '../../../coverage/domain/zone-code';
+import type { IncludedVatJson } from '../../domain/included-vat.vo';
 
 import type { DeliveryQuoteResponse, QuoteResponse } from './quote.response';
 
@@ -13,6 +14,18 @@ export class BusinessDaysRangeSchema implements BusinessDaysRange {
 
   @ApiProperty({ example: 3 })
   readonly max!: number;
+}
+
+@ApiSchema({ name: 'Vat' })
+export class VatSchema implements IncludedVatJson {
+  @ApiProperty({ description: 'VAT rate in percent.', example: 19 })
+  readonly ratePercent!: number;
+
+  @ApiProperty({ type: MoneySchema, description: 'Product amount without VAT.' })
+  readonly base!: MoneySchema;
+
+  @ApiProperty({ type: MoneySchema, description: 'VAT included in the product amount.' })
+  readonly amount!: MoneySchema;
 }
 
 @ApiSchema({ name: 'DeliveryQuote' })
@@ -49,6 +62,12 @@ export class QuoteSchema implements QuoteResponse {
 
   @ApiProperty({ type: MoneySchema, description: 'unitPrice × quantity.' })
   readonly productAmount!: MoneySchema;
+
+  @ApiProperty({
+    type: VatSchema,
+    description: 'VAT included in productAmount; service and delivery fees carry none.',
+  })
+  readonly vat!: VatSchema;
 
   @ApiProperty({ type: MoneySchema, description: 'Fixed fee per order.' })
   readonly serviceFee!: MoneySchema;

@@ -63,6 +63,11 @@ describe('QuoteCheckout', () => {
       delivery: { zone: 'NATIONAL_MAIN', billableWeightKg: 4 },
       calculatedAt: NOW,
     });
+    expect(quote.vat.toJSON()).toEqual({
+      ratePercent: 19,
+      base: cop(117_563).toJSON(),
+      amount: cop(22_337).toJSON(),
+    });
   });
 
   it('accepts up to the order limit when there is enough stock', async () => {
